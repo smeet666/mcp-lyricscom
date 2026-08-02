@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0
+
+First stable release. The tool contracts are now considered settled: tool names,
+their parameters and the shape of their structured output will only change in a
+future major version.
+
+Every tool has been exercised end to end against the live site, including the
+paths that are easy to get wrong: pagination continuity in `get_lyrics`, pages
+that carry no lyrics, rejection of non-lyrics.com URLs, and rate limiting
+surfacing as an explicit error.
+
 ## 0.1.1
 
 - Enforce a floor on the request interval. `LYRICSCOM_MIN_INTERVAL_MS` is now
