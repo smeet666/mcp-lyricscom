@@ -45,8 +45,9 @@ export function throttled(url: string, retryAfterMs: number): LyricsComError {
       url,
       retryAfterMs,
       hint:
-        `Wait about ${Math.ceil(retryAfterMs / 1000)} seconds, then call the same tool again with the same ` +
-        "arguments. If it keeps happening, raise LYRICSCOM_MIN_INTERVAL_MS in your MCP client configuration.",
+        "Wait at least a minute before calling the same tool again with the same arguments. Once lyrics.com " +
+        "starts throttling, the window commonly lasts several minutes, so retrying immediately will fail again. " +
+        "If it keeps happening, raise LYRICSCOM_MIN_INTERVAL_MS in your MCP client configuration.",
     },
   );
 }

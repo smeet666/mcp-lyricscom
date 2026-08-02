@@ -107,10 +107,12 @@ put in it is your call and your responsibility.
 
 ## Troubleshooting
 
-**"throttled" errors.** lyrics.com is rate limiting you. Wait a few seconds and
-retry; the server already backs off and slows itself down on its own. If it keeps
-happening, raise `LYRICSCOM_MIN_INTERVAL_MS`. Note that a `throttled` error does
-not mean your query has no results.
+**"throttled" errors.** lyrics.com is rate limiting you. The server already
+retries with backoff and slows itself down on its own, so seeing this error means
+those retries were exhausted. Once the site starts throttling, the window
+commonly lasts several minutes, not seconds: wait a minute or more before trying
+again, and raise `LYRICSCOM_MIN_INTERVAL_MS` if it keeps happening. A `throttled`
+error does not mean your query has no results.
 
 **"blocked_user_agent" errors.** See the User-Agent section above.
 
@@ -275,10 +277,12 @@ décision et de votre responsabilité.
 
 ## Dépannage
 
-**Erreurs « throttled ».** lyrics.com vous limite. Attendez quelques secondes et
-réessayez ; le serveur ralentit déjà tout seul. Si cela persiste, augmentez
-`LYRICSCOM_MIN_INTERVAL_MS`. Une erreur `throttled` ne signifie pas que votre
-requête n'a pas de résultats.
+**Erreurs « throttled ».** lyrics.com vous limite. Le serveur réessaie déjà avec
+backoff et ralentit tout seul : voir cette erreur signifie que ces tentatives ont
+été épuisées. Une fois la limitation déclenchée, la fenêtre dure couramment
+plusieurs minutes, pas quelques secondes : attendez une minute ou plus avant de
+réessayer, et augmentez `LYRICSCOM_MIN_INTERVAL_MS` si cela persiste. Une erreur
+`throttled` ne signifie pas que votre requête n'a pas de résultats.
 
 **Erreurs « blocked_user_agent ».** Voir la section User-Agent ci-dessus.
 
