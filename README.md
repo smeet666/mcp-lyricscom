@@ -73,15 +73,15 @@ genuine answer.
 
 Every variable is optional. Set them in the `env` block of your MCP client config.
 
-| Variable                      | Default                               | Purpose                                                       |
-| ----------------------------- | ------------------------------------- | ------------------------------------------------------------- |
-| `LYRICSCOM_USER_AGENT`        | `mcp-lyricscom/<version> (+repo url)` | User-Agent sent to lyrics.com. See below.                     |
-| `LYRICSCOM_MIN_INTERVAL_MS`   | `1100`                                | Minimum gap between requests. Raise it if you hit throttling. |
-| `LYRICSCOM_TIMEOUT_MS`        | `15000`                               | Per-request timeout.                                          |
-| `LYRICSCOM_MAX_RETRIES`       | `3`                                   | Retries on throttling and transient errors.                   |
-| `LYRICSCOM_CACHE_TTL_MS`      | `900000`                              | In-memory page cache lifetime (15 minutes).                   |
-| `LYRICSCOM_CACHE_MAX_ENTRIES` | `200`                                 | In-memory page cache size.                                    |
-| `LYRICSCOM_LOG_LEVEL`         | `error`                               | `silent`, `error`, `info` or `debug`. Logs go to stderr.      |
+| Variable                      | Default                               | Purpose                                                                                                   |
+| ----------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `LYRICSCOM_USER_AGENT`        | `mcp-lyricscom/<version> (+repo url)` | User-Agent sent to lyrics.com. See below.                                                                 |
+| `LYRICSCOM_MIN_INTERVAL_MS`   | `1100`                                | Minimum gap between requests. Raise it if you hit throttling. Values below 500 ms are ignored, see below. |
+| `LYRICSCOM_TIMEOUT_MS`        | `15000`                               | Per-request timeout.                                                                                      |
+| `LYRICSCOM_MAX_RETRIES`       | `3`                                   | Retries on throttling and transient errors.                                                               |
+| `LYRICSCOM_CACHE_TTL_MS`      | `900000`                              | In-memory page cache lifetime (15 minutes).                                                               |
+| `LYRICSCOM_CACHE_MAX_ENTRIES` | `200`                                 | In-memory page cache size.                                                                                |
+| `LYRICSCOM_LOG_LEVEL`         | `error`                               | `silent`, `error`, `info` or `debug`. Logs go to stderr.                                                  |
 
 ```json
 {
@@ -169,8 +169,10 @@ reuse anything this server returns, keep that attribution and link back to the
 source page.
 
 The server honours lyrics.com's robots.txt: none of the endpoints it uses are
-disallowed there. It rate limits itself by default. Please do not lower
-`LYRICSCOM_MIN_INTERVAL_MS` for bulk use.
+disallowed there, and it paces itself to roughly one request per second. That
+pacing is enforced: `LYRICSCOM_MIN_INTERVAL_MS` is refused below 500 ms, and a
+lower value falls back to the standard interval with a warning on stderr. Raise
+it to slow the client down further.
 
 This is an unofficial project, with no affiliation to, endorsement by, or
 sponsorship from lyrics.com or STANDS4 Ltd. Use it in accordance with lyrics.com's
@@ -254,15 +256,15 @@ résultat », ce qui serait indiscernable d'une vraie réponse.
 Toutes les variables sont optionnelles. Elles se déclarent dans le bloc `env` de
 la configuration de votre client MCP.
 
-| Variable                      | Défaut                                    | Rôle                                                                 |
-| ----------------------------- | ----------------------------------------- | -------------------------------------------------------------------- |
-| `LYRICSCOM_USER_AGENT`        | `mcp-lyricscom/<version> (+url du dépôt)` | User-Agent envoyé à lyrics.com. Voir plus bas.                       |
-| `LYRICSCOM_MIN_INTERVAL_MS`   | `1100`                                    | Écart minimal entre deux requêtes. À augmenter en cas de limitation. |
-| `LYRICSCOM_TIMEOUT_MS`        | `15000`                                   | Délai d'attente par requête.                                         |
-| `LYRICSCOM_MAX_RETRIES`       | `3`                                       | Tentatives sur limitation et erreurs passagères.                     |
-| `LYRICSCOM_CACHE_TTL_MS`      | `900000`                                  | Durée de vie du cache mémoire (15 minutes).                          |
-| `LYRICSCOM_CACHE_MAX_ENTRIES` | `200`                                     | Taille du cache mémoire.                                             |
-| `LYRICSCOM_LOG_LEVEL`         | `error`                                   | `silent`, `error`, `info` ou `debug`. Les logs vont sur stderr.      |
+| Variable                      | Défaut                                    | Rôle                                                                                                                    |
+| ----------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `LYRICSCOM_USER_AGENT`        | `mcp-lyricscom/<version> (+url du dépôt)` | User-Agent envoyé à lyrics.com. Voir plus bas.                                                                          |
+| `LYRICSCOM_MIN_INTERVAL_MS`   | `1100`                                    | Écart minimal entre deux requêtes. À augmenter en cas de limitation. Une valeur sous 500 ms est ignorée, voir plus bas. |
+| `LYRICSCOM_TIMEOUT_MS`        | `15000`                                   | Délai d'attente par requête.                                                                                            |
+| `LYRICSCOM_MAX_RETRIES`       | `3`                                       | Tentatives sur limitation et erreurs passagères.                                                                        |
+| `LYRICSCOM_CACHE_TTL_MS`      | `900000`                                  | Durée de vie du cache mémoire (15 minutes).                                                                             |
+| `LYRICSCOM_CACHE_MAX_ENTRIES` | `200`                                     | Taille du cache mémoire.                                                                                                |
+| `LYRICSCOM_LOG_LEVEL`         | `error`                                   | `silent`, `error`, `info` ou `debug`. Les logs vont sur stderr.                                                         |
 
 ### À propos du User-Agent
 
@@ -340,8 +342,10 @@ réutilisez ce que renvoie ce serveur, conservez cette attribution et le lien ve
 la page d'origine.
 
 Le serveur respecte le robots.txt de lyrics.com : aucun des endpoints qu'il
-utilise n'y est interdit. Il s'auto-limite par défaut. Merci de ne pas abaisser
-`LYRICSCOM_MIN_INTERVAL_MS` pour un usage en masse.
+utilise n'y est interdit, et il s'impose environ une requête par seconde. Ce
+rythme est contraint : `LYRICSCOM_MIN_INTERVAL_MS` est refusé en dessous de
+500 ms, une valeur plus basse retombant sur l'intervalle standard avec un
+avertissement sur stderr. Augmentez-le pour ralentir davantage.
 
 Projet non officiel, sans affiliation à lyrics.com ni à STANDS4 Ltd, ni
 approbation ou parrainage de leur part. Utilisez-le dans le respect des conditions

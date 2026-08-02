@@ -35,6 +35,17 @@ export const DEFAULTS = {
   logLevel: "error" as LogLevel,
 };
 
+/**
+ * Floor on the request interval, enforced regardless of configuration.
+ *
+ * The pacing is what keeps this client from behaving like a crawler against a
+ * site that has no API and no published rate limit. Leaving it configurable down
+ * to zero would make the politeness of every installation depend on whoever
+ * edited a JSON file, so a value below this floor is refused and the default is
+ * used instead.
+ */
+export const MIN_ALLOWED_INTERVAL_MS = 500;
+
 const LOG_LEVELS: LogLevel[] = ["silent", "error", "info", "debug"];
 
 interface NumericRange {
@@ -63,6 +74,35 @@ function warn(message: string): void {
   process.stderr.write(`[mcp-lyricscom] ${message}\n`);
 }
 
+/**
+ * Read the request interval, refusing anything below the floor.
+ *
+ * A value under the floor falls back to the default rather than to the floor
+ * itself: someone who set 0 was not asking for 500, they were asking for no
+ * pacing at all, and the safe reading of that request is to ignore it.
+ */
+function readInterval(env: NodeJS.ProcessEnv): number {
+  const raw = env.LYRICSCOM_MIN_INTERVAL_MS;
+  if (raw === undefined || raw.trim() === "") return DEFAULTS.minIntervalMs;
+
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) {
+    warn(`LYRICSCOM_MIN_INTERVAL_MS="${raw}" is not a number, using ${DEFAULTS.minIntervalMs}ms`);
+    return DEFAULTS.minIntervalMs;
+  }
+
+  const rounded = Math.round(parsed);
+  if (rounded < MIN_ALLOWED_INTERVAL_MS) {
+    warn(
+      `LYRICSCOM_MIN_INTERVAL_MS=${raw} is below the ${MIN_ALLOWED_INTERVAL_MS}ms floor and was ignored; ` +
+        `using ${DEFAULTS.minIntervalMs}ms. This floor keeps the client from hammering lyrics.com.`,
+    );
+    return DEFAULTS.minIntervalMs;
+  }
+
+  return Math.min(60_000, rounded);
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const rawUserAgent = env.LYRICSCOM_USER_AGENT?.trim();
   const rawLogLevel = env.LYRICSCOM_LOG_LEVEL?.trim().toLowerCase();
@@ -78,12 +118,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 
   return {
     userAgent: rawUserAgent || DEFAULT_USER_AGENT,
-    // 0 is allowed so the throttling behaviour can be exercised deliberately.
-    minIntervalMs: readNumber("LYRICSCOM_MIN_INTERVAL_MS", env, {
-      min: 0,
-      max: 60_000,
-      fallback: DEFAULTS.minIntervalMs,
-    }),
+    minIntervalMs: readInterval(env),
     timeoutMs: readNumber("LYRICSCOM_TIMEOUT_MS", env, {
       min: 1000,
       max: 120_000,
