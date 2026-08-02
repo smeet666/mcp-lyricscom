@@ -1,0 +1,35 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "io.github.smeet666/mcp-lyricscom",
+  "description": "Search song lyrics on lyrics.com by word or by title, and fetch full lyrics. No API key required.",
+  "repository": {
+    "url": "https://github.com/smeet666/mcp-lyricscom",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "mcp-lyricscom",
+      "version": "0.1.0",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "LYRICSCOM_USER_AGENT",
+          "description": "Override the User-Agent sent to lyrics.com.",
+          "isRequired": false
+        },
+        {
+          "name": "LYRICSCOM_MIN_INTERVAL_MS",
+          "description": "Minimum milliseconds between requests. Default 1100.",
+          "isRequired": false
+        },
+        {
+          "name": "LYRICSCOM_LOG_LEVEL",
+          "description": "silent, error, info or debug. Default error.",
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}
