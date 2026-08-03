@@ -1,0 +1,94 @@
+# Nightly canary against the real lyrics.com.
+#
+# The unit tests run against frozen HTML fixtures, so they cannot detect that
+# lyrics.com changed its markup: the day it does, they stay green while the
+# published server is broken for everyone. This job is the only thing that
+# notices, and it opens an issue when it fails.
+#
+# It is deliberately separate from CI: it depends on a third-party site, so a
+# failure here means "the site moved", never "this pull request is bad".
+
+name: Live canary
+
+on:
+  schedule:
+    # 04:17 UTC. Off the hour, because everyone schedules on the hour.
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+# A single run at a time, so a slow night cannot overlap with the next one.
+concurrency:
+  group: live-canary
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Needed to open the issue that reports a broken selector.
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run the live canary
+        id: canary
+        env:
+          LYRICSCOM_LIVE: "1"
+          # Slower than the default: a scheduled job has no user waiting, and
+          # lyrics.com throttles bursts.
+          LYRICSCOM_MIN_INTERVAL_MS: "2000"
+          # Generous: a canary must fail on a changed contract, not on a slow night.
+          LYRICSCOM_TIMEOUT_MS: "60000"
+          LYRICSCOM_LOG_LEVEL: info
+        run: npm run test:live
+
+      - name: Report a broken canary
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "Live canary failing: lyrics.com may have changed its markup";
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              "The nightly live canary failed. Either lyrics.com changed the markup this server parses,",
+              "or it is rate limiting the runner.",
+              "",
+              `Run: ${runUrl}`,
+              "",
+              "The assertion messages name the selector that moved. Fixing a selector means editing",
+              "`src/lyricscom/parsers/selectors.ts`, regenerating the fixtures so the unit tests cover",
+              "the new shape, and releasing a patch version.",
+              "",
+              "If the failure is a `throttled` error rather than a parse failure, the site was simply",
+              "busy and the next run should pass on its own.",
+            ].join("\n");
+
+            // Reuse the open issue rather than filing one every night.
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "live-canary",
+            });
+
+            if (existing.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: `Still failing as of ${new Date().toISOString()}. ${runUrl}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["live-canary"],
+              });
+            }
