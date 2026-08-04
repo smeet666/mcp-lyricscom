@@ -1,6 +1,6 @@
 {
   "name": "mcp-lyricscom",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "MCP server for lyrics.com. Search song lyrics by word or by title, and fetch full lyrics. No API key required.",
   "type": "module",
   "license": "MIT",

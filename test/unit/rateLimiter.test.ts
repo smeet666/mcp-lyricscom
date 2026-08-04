@@ -14,6 +14,7 @@ describe("RateLimiter", () => {
     const order: number[] = [];
     const tasks = [1, 2, 3].map((n) =>
       limiter.schedule(async () => {
+        await limiter.beforeRequest();
         order.push(n);
         return n;
       }),
@@ -28,6 +29,7 @@ describe("RateLimiter", () => {
     const starts: number[] = [];
     const record = () =>
       limiter.schedule(async () => {
+        await limiter.beforeRequest();
         starts.push(Date.now());
       });
 
