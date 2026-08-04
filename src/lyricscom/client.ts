@@ -59,34 +59,41 @@ export class LyricsComClient {
   private readonly config: Config;
   private readonly logger: Logger;
   private readonly limiter: RateLimiter;
-  private readonly cache: TtlLruCache<string>;
+  private readonly cache: TtlLruCache<unknown>;
   private readonly fetchImpl: typeof fetch | undefined;
 
   constructor(options: LyricsComClientOptions = {}) {
     this.config = withGuarantees(options.config ?? loadConfig());
     this.logger = options.logger ?? createLogger(this.config.logLevel);
     this.limiter = new RateLimiter({ minIntervalMs: this.config.minIntervalMs });
-    this.cache = new TtlLruCache<string>(this.config.cacheMaxEntries, this.config.cacheTtlMs);
+    this.cache = new TtlLruCache<unknown>(this.config.cacheMaxEntries, this.config.cacheTtlMs);
     this.fetchImpl = options.fetchImpl;
   }
 
   async search(term: string, page: number): Promise<FetchOutcome<SearchPage>> {
     const url = buildSearchUrl(term, page);
-    const { html, cached } = await this.fetchPage(url);
-    return { data: parseSearchResults(html, { page, url }), cached };
+    return this.fetchParsed(url, (html) => parseSearchResults(html, { page, url }));
   }
 
   async getSong(ref: { id?: string; url?: string }): Promise<FetchOutcome<SongPage>> {
     const { id, url } = resolveSongRef(ref);
-    const { html, cached } = await this.fetchPage(url);
-    return { data: parseSongPage(html, { id, url }), cached };
+    return this.fetchParsed(url, (html) => parseSongPage(html, { id, url }));
   }
 
-  private async fetchPage(url: string): Promise<{ html: string; cached: boolean }> {
+  /**
+   * Fetch, parse, then cache. In that order: a page that could not be read is
+   * never stored, so a bad minute at lyrics.com cannot be replayed from memory for
+   * the rest of the cache lifetime, leaving the tool unable to recover after
+   * the site comes back.
+   *
+   * The cached value is the parsed result rather than the raw page, which also
+   * keeps a few hundred kilobytes of markup per entry out of memory.
+   */
+  private async fetchParsed<T>(url: string, parse: (html: string) => T): Promise<FetchOutcome<T>> {
     const hit = this.cache.get(url);
     if (hit !== undefined) {
       this.logger.debug(`cache hit ${url}`);
-      return { html: hit, cached: true };
+      return { data: hit as T, cached: true };
     }
 
     const html = await fetchHtml(url, {
@@ -95,8 +102,9 @@ export class LyricsComClient {
       logger: this.logger,
       ...(this.fetchImpl ? { fetchImpl: this.fetchImpl } : {}),
     });
-    // Only successful pages are cached; a throttled response never reaches here.
-    this.cache.set(url, html);
-    return { html, cached: false };
+
+    const data = parse(html);
+    this.cache.set(url, data);
+    return { data, cached: false };
   }
 }
