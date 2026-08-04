@@ -7,6 +7,7 @@
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import type { Config, Logger } from "./config.js";
 import { createLogger, loadConfig } from "./config.js";
 import { LyricsComClient } from "./lyricscom/client.js";
@@ -71,8 +72,8 @@ export function createServer(options: CreateServerOptions = {}): McpServer {
     {
       title: "Search lyrics by word",
       description: searchLyricsDescription,
-      inputSchema: searchLyricsInputShape,
-      outputSchema: searchLyricsOutputShape,
+      inputSchema: z.object(searchLyricsInputShape),
+      outputSchema: z.object(searchLyricsOutputShape),
       annotations: READ_ONLY,
     },
     async (args) => runSearchLyrics(client, args as SearchLyricsArgs),
@@ -83,8 +84,8 @@ export function createServer(options: CreateServerOptions = {}): McpServer {
     {
       title: "Search songs by title",
       description: searchSongsDescription,
-      inputSchema: searchSongsInputShape,
-      outputSchema: searchSongsOutputShape,
+      inputSchema: z.object(searchSongsInputShape),
+      outputSchema: z.object(searchSongsOutputShape),
       annotations: READ_ONLY,
     },
     async (args) => runSearchSongs(client, args as SearchSongsArgs),
@@ -95,8 +96,8 @@ export function createServer(options: CreateServerOptions = {}): McpServer {
     {
       title: "Get full lyrics",
       description: getLyricsDescription,
-      inputSchema: getLyricsInputShape,
-      outputSchema: getLyricsOutputShape,
+      inputSchema: z.object(getLyricsInputShape),
+      outputSchema: z.object(getLyricsOutputShape),
       annotations: READ_ONLY,
     },
     async (args) => runGetLyrics(client, args as GetLyricsArgs),
