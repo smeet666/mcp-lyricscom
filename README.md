@@ -184,6 +184,14 @@ This is an unofficial project, with no affiliation to, endorsement by, or
 sponsorship from lyrics.com or STANDS4 Ltd. Use it in accordance with lyrics.com's
 terms of service and the copyright law that applies to you.
 
+## Contributing
+
+Bugs, questions and ideas all belong in
+[the issue tracker](https://github.com/smeet666/mcp-lyricscom/issues). Pull requests
+are welcome; please open an issue first so we can agree on what the right
+answer is before you write it. [CONTRIBUTING.md](CONTRIBUTING.md) has the
+detail, and [SECURITY.md](SECURITY.md) covers anything exploitable.
+
 ## License
 
 MIT. See [LICENSE](./LICENSE). The license covers this source code only, not the
