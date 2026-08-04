@@ -1,0 +1,61 @@
+{
+  "manifest_version": "0.3",
+  "name": "mcp-lyricscom",
+  "display_name": "Lyrics.com",
+  "version": "1.2.0",
+  "description": "MCP server for lyrics.com. Search song lyrics by word or by title, and fetch full lyrics. No API key required.",
+  "long_description": "Find a song from a word inside its lyrics, or by title, then read the full text. No API key, no account.",
+  "author": {
+    "name": "Damien Bouissou",
+    "url": "https://github.com/smeet666"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/smeet666/mcp-lyricscom.git"
+  },
+  "homepage": "https://github.com/smeet666/mcp-lyricscom#readme",
+  "documentation": "https://github.com/smeet666/mcp-lyricscom#readme",
+  "support": "https://github.com/smeet666/mcp-lyricscom/issues",
+  "icon": "assets/icon-512.png",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "model-context-protocol",
+    "mcp-server",
+    "lyrics",
+    "lyrics.com",
+    "song-lyrics",
+    "song",
+    "music",
+    "search"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"]
+    }
+  },
+  "tools": [
+    {
+      "name": "search_lyrics",
+      "description": "Find songs containing a word or phrase in their lyrics."
+    },
+    {
+      "name": "search_songs",
+      "description": "Find songs by title, optionally narrowed by artist."
+    },
+    {
+      "name": "get_lyrics",
+      "description": "Read one song's lyrics by id."
+    }
+  ],
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=20.0.0"
+    }
+  }
+}
