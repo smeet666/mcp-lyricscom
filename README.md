@@ -41,6 +41,14 @@ claude mcp add lyricscom -- npx -y mcp-lyricscom
 
 That is the whole setup. There is nothing to sign up for.
 
+**Bundle, without npm**
+
+Download `mcp-lyricscom-<version>.mcpb` from
+[the latest release](https://github.com/smeet666/mcp-lyricscom/releases/latest) and open
+it. A client that supports MCP bundles installs it on its own, with no npm and
+no configuration file to edit. The bundle carries its dependencies, so nothing
+is fetched at install time.
+
 ## Tools
 
 | Tool            | What it does                                                                                 | Key parameters                                        |
@@ -239,6 +247,14 @@ claude mcp add lyricscom -- npx -y mcp-lyricscom
 ```
 
 C'est toute l'installation. Il n'y a aucune inscription.
+
+**Bundle, sans npm**
+
+Téléchargez `mcp-lyricscom-<version>.mcpb` depuis
+[la dernière release](https://github.com/smeet666/mcp-lyricscom/releases/latest) et
+ouvrez-le. Un client compatible avec les bundles MCP l'installe seul, sans npm
+ni fichier de configuration à modifier. Le bundle embarque ses dépendances,
+donc rien n'est téléchargé à l'installation.
 
 ## Outils
 
