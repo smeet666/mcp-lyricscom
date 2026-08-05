@@ -4,6 +4,7 @@
 [![CI](https://github.com/smeet666/mcp-lyricscom/actions/workflows/ci.yml/badge.svg)](https://github.com/smeet666/mcp-lyricscom/actions/workflows/ci.yml)
 [![license](https://img.shields.io/npm/l/mcp-lyricscom.svg)](./LICENSE)
 [![MCP Registry](https://img.shields.io/badge/MCP_Registry-listed-6E56CF)](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.smeet666/mcp-lyricscom)
+[![Glama](https://glama.ai/mcp/servers/smeet666/mcp-lyricscom/badges/score.svg)](https://glama.ai/mcp/servers/smeet666/mcp-lyricscom)
 
 An [MCP](https://modelcontextprotocol.io) server for [lyrics.com](https://www.lyrics.com).
 Search songs by a word in their lyrics, by title, and read the full text.
