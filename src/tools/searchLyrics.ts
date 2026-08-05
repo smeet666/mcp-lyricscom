@@ -8,7 +8,14 @@ import { dedupeSongs } from "../text/dedupe.js";
 import { matchedLineExcerpt } from "../text/excerpt.js";
 import { containsWord } from "../text/keywordIndex.js";
 import type { SongResult } from "../types.js";
-import { ok, renderResultList, songResultSchema, toSongResultOut, toToolError } from "./shared.js";
+import {
+  MAX_PAGE,
+  ok,
+  renderResultList,
+  songResultSchema,
+  toSongResultOut,
+  toToolError,
+} from "./shared.js";
 import type { ToolResult } from "./shared.js";
 
 /** Verifying against full lyrics costs one page fetch per candidate. */
@@ -151,7 +158,7 @@ export async function runSearchLyrics(
       raw_result_count: data.rawCount,
       filtered_out: filteredOut,
       has_more: data.hasMore,
-      next_page: data.hasMore ? args.page + 1 : null,
+      next_page: data.hasMore && args.page < MAX_PAGE ? args.page + 1 : null,
       source: "lyrics.com" as const,
       notes,
     };
@@ -160,9 +167,14 @@ export async function runSearchLyrics(
       results.length > 0
         ? `${results.length} song(s) on page ${args.page} for "${args.query}":`
         : `No song on page ${args.page} matched "${args.query}".`;
-    const footer = data.hasMore
-      ? `\n\nMore results available: call again with page=${args.page + 1}.`
-      : "";
+    // The footer may only name a page the schema would accept, or it sends a
+    // caller into an argument that is refused.
+    const footer =
+      data.hasMore && args.page < MAX_PAGE
+        ? `\n\nMore results available: call again with page=${args.page + 1}.`
+        : data.hasMore
+          ? `\n\nlyrics.com holds more, but page ${MAX_PAGE} is as far as this tool reads. Narrow the query instead.`
+          : "";
 
     return ok(structured, `${header}\n${renderResultList(results)}${footer}`);
   } catch (error) {

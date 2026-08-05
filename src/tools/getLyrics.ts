@@ -75,6 +75,7 @@ export const getLyricsOutputShape = {
     .nullable(),
   attribution: z.string().describe("Ready-to-display credit line."),
   source: z.literal("lyrics.com"),
+  notes: z.array(z.string()),
 };
 
 export interface GetLyricsArgs {
@@ -114,7 +115,9 @@ export async function runGetLyrics(
     if (args.id) ref.id = args.id;
     else if (args.url) ref.url = args.url;
 
-    const { data } = await client.getSong(ref);
+    const { data, cached } = await client.getSong(ref);
+    const notes: string[] = [];
+    if (cached) notes.push("Served from this server's short-lived in-memory cache.");
     const credit = [data.title, data.artist].filter(Boolean).join(" — ");
     const attribution = `${credit || "Lyrics"} via lyrics.com — ${data.url}`;
 
@@ -131,6 +134,7 @@ export async function runGetLyrics(
         offset: 0,
         next_offset: null,
         truncated: false,
+        notes,
         line_count: 0,
         highlight: null,
         attribution,
@@ -168,16 +172,29 @@ export async function runGetLyrics(
         : null,
       attribution,
       source: "lyrics.com" as const,
+      notes,
     };
+
+    // An offset beyond the words yields an empty body, which on its own reads
+    // as a song that carries none. What happened is that the caller asked for
+    // a position that does not exist, and only saying so tells the two apart.
+    const pastTheEnd = args.offset > 0 && slice === "" && data.lyrics.length > 0;
+    if (pastTheEnd) {
+      notes.push(
+        `offset=${args.offset} is past the end of a body of ${data.lyrics.length} characters. Call again with offset=0 to read it from the start.`,
+      );
+    }
 
     // The text mirror stays a pointer to the structured payload rather than a
     // second copy of the lyrics.
     const summary = [
       attribution,
       `${structured.line_count} lines, ${structured.total_chars} characters.`,
-      nextOffset !== null
-        ? `Truncated: call again with offset=${nextOffset} to continue.`
-        : "Complete.",
+      pastTheEnd
+        ? `Nothing at offset=${args.offset}: that is past the end. Call again with offset=0.`
+        : nextOffset !== null
+          ? `Truncated: call again with offset=${nextOffset} to continue.`
+          : "Complete.",
       structured.highlight
         ? structured.highlight.found
           ? `"${structured.highlight.word}" appears on line ${structured.highlight.line_number}.`
@@ -187,7 +204,7 @@ export async function runGetLyrics(
       .filter(Boolean)
       .join("\n");
 
-    return ok(structured, truncate(`${summary}\n\n${slice}`, 4000));
+    return ok(structured, truncate(`${summary}\n\n${slice}`, 4000), notes);
   } catch (error) {
     return toToolError(error);
   }

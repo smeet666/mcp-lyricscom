@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.3.0
+
+- Say that an offset landed past the end of the words. An empty body under the
+  word "Complete." reads as a song with nothing on file, which is a different
+  fact from the one that happened.
+- Stop calling the site's own suggestions matches. A loose title search returns
+  what lyrics.com guessed at, and a row whose title is not the one asked for sits
+  among them: announcing the list as songs "matching" the query is how one song's
+  words come to be quoted for another. The wording says who chose them, and a
+  note says how to ask for an exact title instead.
+- Never offer a page the schema refuses. A search that reached the last accepted
+  page advertised the next one, sending a caller into an argument that is turned
+  away.
+- Carry the notes into the text block, and keep published text from producing a
+  line shaped like one.
+
 ## 1.2.0
 
 - Ship a `.mcpb` bundle on every release, so the server can be installed by

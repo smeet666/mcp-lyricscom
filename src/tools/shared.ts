@@ -9,6 +9,15 @@ import type { SongResult } from "../types.js";
 /** Many MCP clients render only the text block, so it must stay readable on its own. */
 export const MAX_TEXT_MIRROR_CHARS = 1500;
 
+/**
+ * The last page a search will accept.
+ *
+ * Offering a page beyond this sends a caller into an argument the schema
+ * refuses, so the number that bounds the input is the number an answer is
+ * allowed to suggest.
+ */
+export const MAX_PAGE = 20;
+
 export const songResultSchema = z.object({
   id: z.string().describe("lyrics.com song id. Pass this to get_lyrics."),
   title: z.string(),
@@ -44,9 +53,37 @@ export interface ToolResult {
   isError?: boolean;
 }
 
-export function ok(structured: Record<string, unknown>, text: string): ToolResult {
+/**
+ * Keep text from the site out of the shape this server's own lines take.
+ *
+ * A block ending with lines that open "Note:" gives a caller no way to tell one
+ * of those from the same words inside a title someone else published.
+ * Indenting such a line in the body keeps the two apart, and the structured
+ * output still carries it exactly as it was.
+ */
+function indentMarkerLines(body: string): string {
+  return body.replace(/^(Note:)/gm, " $1");
+}
+
+/**
+ * Build a result whose text block ends with its notes.
+ *
+ * The notes are what qualifies an answer: that an offset landed past the end,
+ * that the site chose these results rather than matching them, that the words
+ * came from this server's cache. A client rendering only the text reads an
+ * unqualified answer without them.
+ */
+export function ok(
+  structured: Record<string, unknown>,
+  text: string,
+  notes: string[] = [],
+): ToolResult {
+  const trailer = notes.map((note) => `Note: ${note}`).join("\n");
+  const budget = MAX_TEXT_MIRROR_CHARS - (trailer ? trailer.length + 2 : 0);
+  const body = truncate(indentMarkerLines(text), Math.max(0, budget));
+
   return {
-    content: [{ type: "text", text: truncate(text, MAX_TEXT_MIRROR_CHARS) }],
+    content: [{ type: "text", text: trailer ? `${body}\n\n${trailer}` : body }],
     structuredContent: structured,
   };
 }

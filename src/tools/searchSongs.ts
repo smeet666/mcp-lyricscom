@@ -10,7 +10,14 @@ import { z } from "zod";
 import type { LyricsComClient } from "../lyricscom/client.js";
 import { dedupeSongs } from "../text/dedupe.js";
 import type { SongResult } from "../types.js";
-import { ok, renderResultList, songResultSchema, toSongResultOut, toToolError } from "./shared.js";
+import {
+  MAX_PAGE,
+  ok,
+  renderResultList,
+  songResultSchema,
+  toSongResultOut,
+  toToolError,
+} from "./shared.js";
 import type { ToolResult } from "./shared.js";
 
 export const searchSongsDescription = [
@@ -126,20 +133,37 @@ export async function runSearchSongs(
       raw_result_count: data.rawCount,
       filtered_out: filteredOut,
       has_more: data.hasMore,
-      next_page: data.hasMore ? args.page + 1 : null,
+      next_page: data.hasMore && args.page < MAX_PAGE ? args.page + 1 : null,
       source: "lyrics.com" as const,
       notes,
     };
 
+    // In loose mode the site returns its own guesses, and a row whose title is
+    // not the one asked for is among them. Calling the list a set of matches is
+    // how one song's words end up quoted for another.
+    const loose = args.match !== "strict";
     const header =
       results.length > 0
-        ? `${results.length} song(s) on page ${args.page} matching "${args.title}":`
+        ? loose
+          ? `${results.length} song(s) lyrics.com offers on page ${args.page} for "${args.title}":`
+          : `${results.length} song(s) on page ${args.page} matching "${args.title}":`
         : `No song on page ${args.page} matched "${args.title}".`;
-    const footer = data.hasMore
-      ? `\n\nMore results available: call again with page=${args.page + 1}.`
-      : "";
+    // The footer may only name a page the schema would accept, or it sends a
+    // caller into an argument that is refused.
+    const footer =
+      data.hasMore && args.page < MAX_PAGE
+        ? `\n\nMore results available: call again with page=${args.page + 1}.`
+        : data.hasMore
+          ? `\n\nlyrics.com holds more, but page ${MAX_PAGE} is as far as this tool reads. Narrow the query instead.`
+          : "";
 
-    return ok(structured, `${header}\n${renderResultList(results)}${footer}`);
+    if (results.length > 0 && loose) {
+      notes.push(
+        `These are lyrics.com's own suggestions for "${args.title}", not rows whose title matches it. Check each title before quoting one, or ask again with match="strict".`,
+      );
+    }
+
+    return ok(structured, `${header}\n${renderResultList(results)}${footer}`, notes);
   } catch (error) {
     return toToolError(error);
   }
