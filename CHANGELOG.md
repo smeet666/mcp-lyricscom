@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.0
+
+- Refuse an argument no tool declares, instead of reading it and dropping it.
+  Every tool's schema already announced `additionalProperties: false`, but the
+  server accepted an undeclared argument silently, computed the answer on the
+  default for it, and returned that answer as if it had honored what was
+  asked. Now the call is refused under the `invalid_input` code, the message
+  names the argument, and offers the declared name when one is close: passing
+  `limt` to `search_lyrics` gets "did you mean 'limit'?", and passing `art` to
+  `search_songs` gets "did you mean 'artist'?".
+
 ## 1.3.0
 
 - Say that an offset landed past the end of the words. An empty body under the

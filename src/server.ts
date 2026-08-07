@@ -13,7 +13,7 @@ import { createLogger, loadConfig } from "./config.js";
 import { LyricsComClient } from "./lyricscom/client.js";
 import {
   getLyricsDescription,
-  getLyricsInputShape,
+  getLyricsInput,
   getLyricsOutputShape,
   runGetLyrics,
 } from "./tools/getLyrics.js";
@@ -21,14 +21,14 @@ import type { GetLyricsArgs } from "./tools/getLyrics.js";
 import {
   runSearchLyrics,
   searchLyricsDescription,
-  searchLyricsInputShape,
+  searchLyricsInput,
   searchLyricsOutputShape,
 } from "./tools/searchLyrics.js";
 import type { SearchLyricsArgs } from "./tools/searchLyrics.js";
 import {
   runSearchSongs,
   searchSongsDescription,
-  searchSongsInputShape,
+  searchSongsInput,
   searchSongsOutputShape,
 } from "./tools/searchSongs.js";
 import type { SearchSongsArgs } from "./tools/searchSongs.js";
@@ -72,7 +72,7 @@ export function createServer(options: CreateServerOptions = {}): McpServer {
     {
       title: "Search lyrics by word",
       description: searchLyricsDescription,
-      inputSchema: z.object(searchLyricsInputShape),
+      inputSchema: searchLyricsInput,
       outputSchema: z.object(searchLyricsOutputShape),
       annotations: READ_ONLY,
     },
@@ -84,7 +84,7 @@ export function createServer(options: CreateServerOptions = {}): McpServer {
     {
       title: "Search songs by title",
       description: searchSongsDescription,
-      inputSchema: z.object(searchSongsInputShape),
+      inputSchema: searchSongsInput,
       outputSchema: z.object(searchSongsOutputShape),
       annotations: READ_ONLY,
     },
@@ -96,7 +96,7 @@ export function createServer(options: CreateServerOptions = {}): McpServer {
     {
       title: "Get full lyrics",
       description: getLyricsDescription,
-      inputSchema: z.object(getLyricsInputShape),
+      inputSchema: getLyricsInput,
       outputSchema: z.object(getLyricsOutputShape),
       annotations: READ_ONLY,
     },

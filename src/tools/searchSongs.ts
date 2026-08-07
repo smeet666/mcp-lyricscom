@@ -10,6 +10,7 @@ import { z } from "zod";
 import type { LyricsComClient } from "../lyricscom/client.js";
 import { dedupeSongs } from "../text/dedupe.js";
 import type { SongResult } from "../types.js";
+import { strictInput } from "./arguments.js";
 import {
   MAX_PAGE,
   ok,
@@ -29,7 +30,7 @@ export const searchSongsDescription = [
   'use match="strict" to keep only genuine title matches.',
 ].join(" ");
 
-export const searchSongsInputShape = {
+export const searchSongsInput = strictInput({
   title: z.string().min(1).max(120).describe("Song title, or part of it."),
   artist: z
     .string()
@@ -45,7 +46,7 @@ export const searchSongsInputShape = {
       "'strict' keeps only results whose title matches the query as a whole title, ignoring suffixes such as " +
         "'(Remastered)'. 'loose' keeps anything lyrics.com returned, best match first.",
     ),
-};
+});
 
 export const searchSongsOutputShape = {
   title: z.string(),

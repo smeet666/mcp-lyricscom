@@ -5,6 +5,7 @@
 import { z } from "zod";
 import type { LyricsComClient } from "../lyricscom/client.js";
 import { findMatchingLine } from "../text/excerpt.js";
+import { strictInput } from "./arguments.js";
 import { ok, toToolError, truncate } from "./shared.js";
 import type { ToolResult } from "./shared.js";
 
@@ -17,7 +18,7 @@ export const getLyricsDescription = [
   "Always cite 'source_url' and the artist when showing lyrics to a user.",
 ].join(" ");
 
-export const getLyricsInputShape = {
+export const getLyricsInput = strictInput({
   id: z
     .string()
     .regex(/^\d+$/, "Song ids are digits only.")
@@ -50,7 +51,7 @@ export const getLyricsInputShape = {
     .describe(
       "Optional word. When set, the response reports whether it appears in the lyrics and on which line.",
     ),
-};
+});
 
 export const getLyricsOutputShape = {
   status: z.enum(["ok", "no_lyrics"]),

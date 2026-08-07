@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { runGetLyrics } from "../../src/tools/getLyrics.js";
 import { runSearchSongs } from "../../src/tools/searchSongs.js";
 import { runSearchLyrics } from "../../src/tools/searchLyrics.js";
-import { searchLyricsInputShape } from "../../src/tools/searchLyrics.js";
+import { searchLyricsInput } from "../../src/tools/searchLyrics.js";
 import type { LyricsComClient } from "../../src/lyricscom/client.js";
 
 const textOf = (result: any) => result.content[0].text as string;
@@ -119,7 +119,7 @@ describe("the page a search offers next", () => {
     // Offering a page beyond the accepted range sends a caller into an error
     // it was told to expect a result from.
     expect(
-      JSON.stringify(searchLyricsInputShape.page),
+      JSON.stringify(searchLyricsInput.shape.page),
       "the page argument is bounded at 20, which is what makes offering 21 a lie",
     ).toBeTruthy();
 

@@ -8,6 +8,7 @@ import { dedupeSongs } from "../text/dedupe.js";
 import { matchedLineExcerpt } from "../text/excerpt.js";
 import { containsWord } from "../text/keywordIndex.js";
 import type { SongResult } from "../types.js";
+import { strictInput } from "./arguments.js";
 import {
   MAX_PAGE,
   ok,
@@ -31,7 +32,7 @@ export const searchLyricsDescription = [
   "where the word genuinely appears in the lyrics. Set 'verify' to \"none\" to see the raw, unfiltered list.",
 ].join(" ");
 
-export const searchLyricsInputShape = {
+export const searchLyricsInput = strictInput({
   query: z
     .string()
     .min(1)
@@ -63,7 +64,7 @@ export const searchLyricsInputShape = {
     .boolean()
     .default(true)
     .describe("Include the matching lyric line excerpt in each result."),
-};
+});
 
 export const searchLyricsOutputShape = {
   query: z.string(),
