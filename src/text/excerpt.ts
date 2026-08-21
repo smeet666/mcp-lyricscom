@@ -22,11 +22,15 @@ export interface LineMatch {
 
 /** First line containing `keyword`, using the two-pass matcher. */
 export function findMatchingLine(text: string, keyword: string): LineMatch | null {
-  if (!text || !keyword) return null;
+  if (!text || !keyword) {
+    return null;
+  }
   const lines = text.split("\n");
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i] ?? "";
-    if (line.trim() === "") continue;
+    if (line.trim() === "") {
+      continue;
+    }
     if (getKeywordIndex(keyword, line) !== -1) {
       return { line: line.trim(), lineNumber: i + 1 };
     }
@@ -44,7 +48,9 @@ export function matchedLineExcerpt(
   options: ExcerptOptions = {},
 ): string | null {
   const maxChars = options.maxChars ?? 160;
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
 
   const match = findMatchingLine(text, keyword);
   const line =
@@ -53,8 +59,12 @@ export function matchedLineExcerpt(
       .split("\n")
       .find((candidate) => candidate.trim() !== "")
       ?.trim();
-  if (!line) return null;
-  if (line.length <= maxChars) return line;
+  if (!line) {
+    return null;
+  }
+  if (line.length <= maxChars) {
+    return line;
+  }
 
   const keywordAt = match ? Math.max(getKeywordIndex(keyword, line), 0) : 0;
   const start = Math.max(0, keywordAt - Math.floor(maxChars / 2));

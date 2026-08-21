@@ -9,6 +9,30 @@ import { strictInput } from "./arguments.js";
 import { ok, toToolError, truncate } from "./shared.js";
 import type { ToolResult } from "./shared.js";
 
+/** Where the answer stopped in the words, and what to ask for to go on. */
+function howFarTheTextGoes(pastTheEnd: boolean, offset: number, nextOffset: number | null): string {
+  if (pastTheEnd) {
+    return `Nothing at offset=${offset}: that is past the end. Call again with offset=0.`;
+  }
+  if (nextOffset === null) {
+    return "Complete.";
+  }
+  return `Truncated: call again with offset=${nextOffset} to continue.`;
+}
+
+/** What was found of the word a caller asked to be shown, when they asked for one. */
+function whereTheWordIs(
+  highlight: { word: string; found: boolean; line_number: number | null } | null | undefined,
+): string {
+  if (!highlight) {
+    return "";
+  }
+  if (!highlight.found) {
+    return `"${highlight.word}" does not appear in these lyrics.`;
+  }
+  return `"${highlight.word}" appears on line ${highlight.line_number}.`;
+}
+
 export const getLyricsDescription = [
   "Fetch the full lyrics of one song from lyrics.com, given the song id or URL returned by search_lyrics or search_songs.",
   "Lyrics can be long, so the response is truncated by default: check 'truncated' and call again with 'offset' set to",
@@ -96,10 +120,14 @@ export function sliceAtLineBoundary(
   offset: number,
   maxChars: number,
 ): { slice: string; nextOffset: number | null } {
-  if (offset >= text.length) return { slice: "", nextOffset: null };
+  if (offset >= text.length) {
+    return { slice: "", nextOffset: null };
+  }
 
   const remaining = text.slice(offset);
-  if (remaining.length <= maxChars) return { slice: remaining, nextOffset: null };
+  if (remaining.length <= maxChars) {
+    return { slice: remaining, nextOffset: null };
+  }
 
   const window = remaining.slice(0, maxChars);
   const lastBreak = window.lastIndexOf("\n");
@@ -113,12 +141,17 @@ export async function runGetLyrics(
 ): Promise<ToolResult> {
   try {
     const ref: { id?: string; url?: string } = {};
-    if (args.id) ref.id = args.id;
-    else if (args.url) ref.url = args.url;
+    if (args.id) {
+      ref.id = args.id;
+    } else if (args.url) {
+      ref.url = args.url;
+    }
 
     const { data, cached } = await client.getSong(ref);
     const notes: string[] = [];
-    if (cached) notes.push("Served from this server's short-lived in-memory cache.");
+    if (cached) {
+      notes.push("Served from this server's short-lived in-memory cache.");
+    }
     const credit = [data.title, data.artist].filter(Boolean).join(" — ");
     const attribution = `${credit || "Lyrics"} via lyrics.com — ${data.url}`;
 
@@ -191,16 +224,8 @@ export async function runGetLyrics(
     const summary = [
       attribution,
       `${structured.line_count} lines, ${structured.total_chars} characters.`,
-      pastTheEnd
-        ? `Nothing at offset=${args.offset}: that is past the end. Call again with offset=0.`
-        : nextOffset !== null
-          ? `Truncated: call again with offset=${nextOffset} to continue.`
-          : "Complete.",
-      structured.highlight
-        ? structured.highlight.found
-          ? `"${structured.highlight.word}" appears on line ${structured.highlight.line_number}.`
-          : `"${structured.highlight.word}" does not appear in these lyrics.`
-        : "",
+      howFarTheTextGoes(pastTheEnd, args.offset, nextOffset),
+      whereTheWordIs(structured.highlight),
     ]
       .filter(Boolean)
       .join("\n");

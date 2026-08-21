@@ -72,12 +72,12 @@ export class LyricsComClient {
 
   async search(term: string, page: number): Promise<FetchOutcome<SearchPage>> {
     const url = buildSearchUrl(term, page);
-    return this.fetchParsed(url, (html) => parseSearchResults(html, { page, url }));
+    return await this.fetchParsed(url, (html) => parseSearchResults(html, { page, url }));
   }
 
   async getSong(ref: { id?: string; url?: string }): Promise<FetchOutcome<SongPage>> {
     const { id, url } = resolveSongRef(ref);
-    return this.fetchParsed(url, (html) => parseSongPage(html, { id, url }));
+    return await this.fetchParsed(url, (html) => parseSongPage(html, { id, url }));
   }
 
   /**

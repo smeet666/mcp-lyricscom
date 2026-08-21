@@ -30,7 +30,9 @@ function encodeTerm(term: string): string {
  */
 export function buildSearchUrl(term: string, page: number): string {
   const encoded = encodeTerm(term);
-  if (page <= 1) return `${BASE_URL}/lyrics/${encoded}`;
+  if (page <= 1) {
+    return `${BASE_URL}/lyrics/${encoded}`;
+  }
   return `${BASE_URL}/serp.php?st=${encoded}&p=${page}`;
 }
 
@@ -46,7 +48,9 @@ export function isLyricsComHost(rawUrl: string): boolean {
   } catch {
     return false;
   }
-  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    return false;
+  }
   return ALLOWED_HOSTS.has(parsed.hostname.toLowerCase());
 }
 
@@ -54,10 +58,14 @@ export function isLyricsComHost(rawUrl: string): boolean {
 export function extractSongId(hrefOrUrl: string): string | null {
   let path = hrefOrUrl;
   if (/^https?:\/\//i.test(hrefOrUrl)) {
-    if (!isLyricsComHost(hrefOrUrl)) return null;
+    if (!isLyricsComHost(hrefOrUrl)) {
+      return null;
+    }
     path = new URL(hrefOrUrl).pathname;
   }
-  if (!path.startsWith("/")) path = `/${path}`;
+  if (!path.startsWith("/")) {
+    path = `/${path}`;
+  }
   const match = SONG_HREF_RE.exec(path);
   return match?.[1] ?? null;
 }

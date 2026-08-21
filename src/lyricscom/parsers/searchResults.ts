@@ -84,6 +84,8 @@ export function parseSearchResults(html: string, options: ParseSearchOptions): S
 /** Year cells look like "1971" but are sometimes decorated or empty. */
 function parseYear(raw: string): number | null {
   const match = /\b(1[89]\d{2}|20\d{2})\b/.exec(raw);
-  if (!match?.[1]) return null;
+  if (!match?.[1]) {
+    return null;
+  }
   return Number.parseInt(match[1], 10);
 }

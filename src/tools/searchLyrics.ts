@@ -22,6 +22,73 @@ import type { ToolResult } from "./shared.js";
 /** Verifying against full lyrics costs one page fetch per candidate. */
 const MAX_FULL_VERIFICATIONS = 5;
 
+/**
+ * The rows whose words actually carry the query, and how many did not.
+ *
+ * lyrics.com answers a search with rows whose snippet may not hold the words at
+ * all, so each row is checked against the text there is: its snippet, or the
+ * full lyrics when a caller asked for that and the cap allows another read. A
+ * single unreadable song page is noted and stepped over rather than sinking the
+ * whole search.
+ */
+async function keepTheOnesCarryingTheWords(
+  client: LyricsComClient,
+  args: SearchLyricsArgs,
+  unique: readonly SongResult[],
+  notes: string[],
+): Promise<{ kept: Array<{ song: SongResult; excerpt: string | null }>; filteredOut: number }> {
+  const kept: Array<{ song: SongResult; excerpt: string | null }> = [];
+  let filteredOut = 0;
+  let fullChecks = 0;
+
+  for (const song of unique) {
+    if (kept.length >= args.limit) {
+      break;
+    }
+
+    let text = song.snippet ?? "";
+    if (args.verify === "full" && fullChecks < MAX_FULL_VERIFICATIONS) {
+      fullChecks += 1;
+      try {
+        const page = await client.getSong({ id: song.id });
+        if (page.data.hasLyrics) {
+          text = page.data.lyrics;
+        }
+      } catch {
+        notes.push(`Could not verify "${song.title}" against its full lyrics.`);
+      }
+    }
+
+    const matches = args.verify === "none" || (text !== "" && containsWord(args.query, text));
+    if (!matches) {
+      filteredOut += 1;
+      continue;
+    }
+
+    const excerpt =
+      args.include_excerpt && text ? matchedLineExcerpt(text, args.query, { maxChars: 160 }) : null;
+    kept.push({ song, excerpt });
+  }
+
+  return { kept, filteredOut };
+}
+
+/**
+ * What to say about the rows past this page.
+ *
+ * The sentence may only name a page the schema would accept, or it sends a
+ * caller into an argument that is refused.
+ */
+function whatFollowsThisPage(hasMore: boolean, page: number): string {
+  if (!hasMore) {
+    return "";
+  }
+  if (page < MAX_PAGE) {
+    return `\n\nMore results available: call again with page=${page + 1}.`;
+  }
+  return `\n\nlyrics.com holds more, but page ${MAX_PAGE} is as far as this tool reads. Narrow the query instead.`;
+}
+
 export const searchLyricsDescription = [
   "Search lyrics.com for songs whose lyrics contain a given word or phrase.",
   "Returns matching songs with artist, title, a short excerpt of the line where the word appears,",
@@ -101,42 +168,12 @@ export async function runSearchLyrics(
   try {
     const { data, cached } = await client.search(args.query, args.page);
     const notes: string[] = [];
-    if (cached) notes.push("Served from this server's short-lived in-memory cache.");
+    if (cached) {
+      notes.push("Served from this server's short-lived in-memory cache.");
+    }
 
     const unique = dedupeSongs(data.results);
-    const kept: Array<{ song: SongResult; excerpt: string | null }> = [];
-    let filteredOut = 0;
-    let fullChecks = 0;
-
-    for (const song of unique) {
-      if (kept.length >= args.limit) break;
-
-      let text = song.snippet ?? "";
-
-      if (args.verify === "full" && fullChecks < MAX_FULL_VERIFICATIONS) {
-        fullChecks += 1;
-        try {
-          const page = await client.getSong({ id: song.id });
-          if (page.data.hasLyrics) text = page.data.lyrics;
-        } catch (error) {
-          // A single unreadable song page must not sink the whole search.
-          notes.push(`Could not verify "${song.title}" against its full lyrics.`);
-          void error;
-        }
-      }
-
-      const matches = args.verify === "none" || (text !== "" && containsWord(args.query, text));
-      if (!matches) {
-        filteredOut += 1;
-        continue;
-      }
-
-      const excerpt =
-        args.include_excerpt && text
-          ? matchedLineExcerpt(text, args.query, { maxChars: 160 })
-          : null;
-      kept.push({ song, excerpt });
-    }
+    const { kept, filteredOut } = await keepTheOnesCarryingTheWords(client, args, unique, notes);
 
     if (args.verify === "full" && unique.length > MAX_FULL_VERIFICATIONS) {
       notes.push(
@@ -170,12 +207,7 @@ export async function runSearchLyrics(
         : `No song on page ${args.page} matched "${args.query}".`;
     // The footer may only name a page the schema would accept, or it sends a
     // caller into an argument that is refused.
-    const footer =
-      data.hasMore && args.page < MAX_PAGE
-        ? `\n\nMore results available: call again with page=${args.page + 1}.`
-        : data.hasMore
-          ? `\n\nlyrics.com holds more, but page ${MAX_PAGE} is as far as this tool reads. Narrow the query instead.`
-          : "";
+    const footer = whatFollowsThisPage(data.hasMore, args.page);
 
     return ok(structured, `${header}\n${renderResultList(results)}${footer}`);
   } catch (error) {
