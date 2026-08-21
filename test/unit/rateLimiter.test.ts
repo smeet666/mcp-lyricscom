@@ -67,7 +67,9 @@ describe("RateLimiter", () => {
     limiter.penalize();
     expect(limiter.currentIntervalMs).toBe(8000);
 
-    for (let i = 0; i < 20; i += 1) limiter.relax();
+    for (let i = 0; i < 20; i += 1) {
+      limiter.relax();
+    }
     expect(limiter.currentIntervalMs).toBe(1000);
   });
 

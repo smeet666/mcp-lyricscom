@@ -26,7 +26,9 @@ function escapeRegExp(value: string): string {
  * The returned index points at the keyword itself, not at the leading delimiter.
  */
 export function getKeywordIndex(keyword: string, text: string): number {
-  if (!keyword || !text) return -1;
+  if (!keyword || !text) {
+    return -1;
+  }
 
   const escaped = escapeRegExp(keyword.toLowerCase());
   const haystack = text.toLowerCase();

@@ -21,6 +21,33 @@ import {
 } from "./shared.js";
 import type { ToolResult } from "./shared.js";
 
+/**
+ * What to say about the rows past this page.
+ *
+ * The sentence may only name a page the schema would accept, or it sends a
+ * caller into an argument that is refused.
+ */
+function whatFollowsThisPage(hasMore: boolean, page: number): string {
+  if (!hasMore) {
+    return "";
+  }
+  if (page < MAX_PAGE) {
+    return `\n\nMore results available: call again with page=${page + 1}.`;
+  }
+  return `\n\nlyrics.com holds more, but page ${MAX_PAGE} is as far as this tool reads. Narrow the query instead.`;
+}
+
+/** The opening line, which says whether the site matched the title or merely offered rows. */
+function headerFor(found: number, loose: boolean, page: number, title: string): string {
+  if (found === 0) {
+    return `No song on page ${page} matched "${title}".`;
+  }
+  if (loose) {
+    return `${found} song(s) lyrics.com offers on page ${page} for "${title}":`;
+  }
+  return `${found} song(s) on page ${page} matching "${title}":`;
+}
+
 export const searchSongsDescription = [
   "Find songs on lyrics.com by their title.",
   "Returns candidate songs with artist, album, year, and the lyrics.com id and URL.",
@@ -82,10 +109,18 @@ function normalizeTitle(title: string): string {
 export function titleScore(candidate: string, query: string): number {
   const a = normalizeTitle(candidate);
   const b = normalizeTitle(query);
-  if (!a || !b) return 0;
-  if (a === b) return 3;
-  if (a.startsWith(b)) return 2;
-  if (a.includes(b)) return 1;
+  if (!a || !b) {
+    return 0;
+  }
+  if (a === b) {
+    return 3;
+  }
+  if (a.startsWith(b)) {
+    return 2;
+  }
+  if (a.includes(b)) {
+    return 1;
+  }
   return 0;
 }
 
@@ -96,7 +131,9 @@ export async function runSearchSongs(
   try {
     const { data, cached } = await client.search(args.title, args.page);
     const notes: string[] = [];
-    if (cached) notes.push("Served from this server's short-lived in-memory cache.");
+    if (cached) {
+      notes.push("Served from this server's short-lived in-memory cache.");
+    }
 
     const artistFilter = args.artist?.trim().toLowerCase() ?? null;
     const unique = dedupeSongs(data.results);
@@ -143,20 +180,10 @@ export async function runSearchSongs(
     // not the one asked for is among them. Calling the list a set of matches is
     // how one song's words end up quoted for another.
     const loose = args.match !== "strict";
-    const header =
-      results.length > 0
-        ? loose
-          ? `${results.length} song(s) lyrics.com offers on page ${args.page} for "${args.title}":`
-          : `${results.length} song(s) on page ${args.page} matching "${args.title}":`
-        : `No song on page ${args.page} matched "${args.title}".`;
+    const header = headerFor(results.length, loose, args.page, args.title);
     // The footer may only name a page the schema would accept, or it sends a
     // caller into an argument that is refused.
-    const footer =
-      data.hasMore && args.page < MAX_PAGE
-        ? `\n\nMore results available: call again with page=${args.page + 1}.`
-        : data.hasMore
-          ? `\n\nlyrics.com holds more, but page ${MAX_PAGE} is as far as this tool reads. Narrow the query instead.`
-          : "";
+    const footer = whatFollowsThisPage(data.hasMore, args.page);
 
     if (results.length > 0 && loose) {
       notes.push(

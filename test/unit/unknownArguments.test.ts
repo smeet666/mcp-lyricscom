@@ -28,7 +28,7 @@ interface StubRoute {
 }
 
 /** Routes a request URL to a canned response, by substring match. */
-function stubFetch(routes: Array<[RegExp, StubRoute]>): typeof fetch {
+function stubFetch(routes: [RegExp, StubRoute][]): typeof fetch {
   return (async (input: Parameters<typeof fetch>[0]) => {
     const url = typeof input === "string" ? input : input.toString();
     for (const [pattern, route] of routes) {
@@ -40,13 +40,13 @@ function stubFetch(routes: Array<[RegExp, StubRoute]>): typeof fetch {
   }) as unknown as typeof fetch;
 }
 
-const SEARCH_OK: Array<[RegExp, StubRoute]> = [
+const SEARCH_OK: [RegExp, StubRoute][] = [
   [/lyrics\/|serp\.php/, { body: load("serp-page1.html") }],
   [/lyric-lf\//, { body: load("song-with-lyrics.html") }],
 ];
 
 /** One valid call per tool, so a refusal is never mistaken for a broken tool. */
-const CALLS: Array<[string, Record<string, unknown>]> = [
+const CALLS: [string, Record<string, unknown>][] = [
   ["search_lyrics", { query: "joie" }],
   ["search_songs", { title: "Placeholder Song 1" }],
   ["get_lyrics", { id: "1000001" }],

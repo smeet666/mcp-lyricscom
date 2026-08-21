@@ -21,7 +21,7 @@ interface StubRoute {
 }
 
 /** Routes a request URL to a canned response, by substring match. */
-function stubFetch(routes: Array<[RegExp, StubRoute]>): typeof fetch {
+function stubFetch(routes: [RegExp, StubRoute][]): typeof fetch {
   return (async (input: Parameters<typeof fetch>[0]) => {
     const url = typeof input === "string" ? input : input.toString();
     for (const [pattern, route] of routes) {
@@ -48,7 +48,7 @@ async function connect(fetchImpl: typeof fetch) {
   return { client, server };
 }
 
-const SEARCH_OK: Array<[RegExp, StubRoute]> = [
+const SEARCH_OK: [RegExp, StubRoute][] = [
   [/lyrics\/|serp\.php/, { body: load("serp-page1.html") }],
   [/lyric-lf\//, { body: load("song-with-lyrics.html") }],
 ];

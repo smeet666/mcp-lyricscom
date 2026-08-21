@@ -22,7 +22,9 @@ export function dedupeSongs<T extends SongResult>(songs: T[]): T[] {
   const unique: T[] = [];
   for (const song of songs) {
     const key = songKey(song.artist, song.title);
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     unique.push(song);
   }

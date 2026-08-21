@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 
 const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "test", "fixtures");
 
-const PAD = "<!-- " + "padding ".repeat(400) + "-->";
+const PAD = `<!-- ${"padding ".repeat(400)}-->`;
 
 function page(title, body) {
   return `<!DOCTYPE html>
@@ -87,7 +87,8 @@ function buildSerpPage1() {
         title: `Placeholder Song ${n}`,
         album: i % 8 === 0 ? `Placeholder Album ${n}` : null,
         year: i % 12 === 0 ? 1970 + n : null,
-        snippet: `first placeholder line\nline two mentions <em>joie</em> right here\nthird placeholder line`,
+        snippet:
+          "first placeholder line\nline two mentions <em>joie</em> right here\nthird placeholder line",
         legacyPath: i === 5 || i === 11,
         artistPlural: i === 16 || i === 22,
       }),
@@ -102,7 +103,7 @@ function buildSerpPage1() {
       title: "Placeholder Song 1 [Deluxe Edition]",
       album: "Placeholder Album 1",
       year: 1971,
-      snippet: `line two mentions <em>joie</em> right here`,
+      snippet: "line two mentions <em>joie</em> right here",
       legacyPath: false,
     }),
   );
@@ -139,8 +140,8 @@ function buildSongWithLyrics() {
   const body = [
     `Placeholder <a href="/definition/first">first</a> line of text`,
     `Second placeholder line mentioning <a href="/definition/joie">joie</a> clearly`,
-    ``,
-    `Third placeholder line after a blank`,
+    "",
+    "Third placeholder line after a blank",
     `Fourth <a href="/definition/final">final</a> placeholder line`,
   ].join("\n");
 
