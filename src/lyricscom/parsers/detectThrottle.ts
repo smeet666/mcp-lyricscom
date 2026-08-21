@@ -15,7 +15,11 @@ export type ResponseVerdict =
   | { kind: "server-error"; status: number };
 
 export type ThrottleReason =
-  "status-202" | "status-429" | "status-503" | "empty-body" | "short-body";
+  | "status-202"
+  | "status-429"
+  | "status-503"
+  | "empty-body"
+  | "short-body";
 
 /**
  * A real search page weighs about 187 KB and a song page 60 KB or more, so a

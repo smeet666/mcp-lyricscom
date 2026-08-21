@@ -1,9 +1,11 @@
 # mcp-lyricscom
 
 ## Tagline
+
 Find a song from a word inside its lyrics, then read the words, with no API key.
 
 ## Description
+
 An MCP server for lyrics.com. Its reason to exist is one question the other
 lyrics sources cannot answer: which song contains this line. Search by a phrase
 you half remember, or by title when you know it, then read the full lyrics.
@@ -14,6 +16,7 @@ paginate, and a throttled response is reported as throttling rather than as a
 song that does not exist.
 
 ## Setup Requirements
+
 - `LYRICSCOM_USER_AGENT` (optional): Identify your own client. The project's own identifier is appended.
 - `LYRICSCOM_MIN_INTERVAL_MS` (optional): Minimum gap between requests. Default 1100, and values below 500 are refused.
 - `LYRICSCOM_TIMEOUT_MS` (optional): Per-request deadline. Default 15000.
@@ -23,9 +26,11 @@ song that does not exist.
 No API key and no account are needed.
 
 ## Category
+
 Content & Media
 
 ## Features
+
 - Search by a word or a phrase written inside the lyrics
 - Search by title, in a strict or a loose mode, with the mode stated in the answer
 - Read the full lyrics of one song, paginated at line boundaries
@@ -35,6 +40,7 @@ Content & Media
 - Attribution and a source link on every result
 
 ## Getting Started
+
 - "Which song has the line 'we are the champions, my friends'?"
 - "Find a song whose lyrics mention a paper moon"
 - "Show me the full lyrics of Sunny Afternoon by The Kinks"
@@ -43,7 +49,9 @@ Content & Media
 - Tool: get_lyrics — Reads the full lyrics of one song
 
 ## Tags
+
 lyrics, song-search, full-text, music, songs, lyrics-com, no-api-key, read-only
 
 ## Documentation URL
+
 https://github.com/smeet666/mcp-lyricscom#readme
