@@ -67,7 +67,7 @@ describe.runIf(enabled)("live lyrics.com", () => {
 
   it("still extracts full lyrics from a song page", async () => {
     const search = await client.search("autrefois", 1);
-    const withSnippet = search.data.results.find((song) => song.snippet)!;
+    const withSnippet = search.data.results.find((row) => row.snippet)!;
     const song = await client.getSong({ id: withSnippet.id });
 
     expect(song.data.url).toContain("lyrics.com");

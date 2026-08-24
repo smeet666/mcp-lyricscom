@@ -5,7 +5,7 @@
  * same markup, so one parser covers both.
  */
 
-import * as cheerio from "cheerio";
+import { load } from "cheerio";
 import { parseFailure } from "../../errors.js";
 import type { SearchPage, SongResult } from "../../types.js";
 import { cleanInlineText, cleanLyricsText } from "../../text/normalize.js";
@@ -19,7 +19,7 @@ export interface ParseSearchOptions {
 }
 
 export function parseSearchResults(html: string, options: ParseSearchOptions): SearchPage {
-  const $ = cheerio.load(html);
+  const $ = load(html);
   const rows = $(SEL.serpItem);
 
   if (rows.length === 0) {

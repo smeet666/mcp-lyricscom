@@ -112,6 +112,16 @@ export async function fetchHtml(url: string, deps: HttpDeps): Promise<string> {
           throw blockedUserAgent(url);
         case "not-found":
           throw notFound(url);
+
+        // Every kind the classifier declares is handled above, and the linter
+        // holds that. This clause is the runtime backstop: a response nothing
+        // above matched leaves as an error rather than as a silent retry.
+        default:
+          throw new LyricsComError(
+            "network_error",
+            `lyrics.com returned a response this client cannot classify for ${url}.`,
+            { url },
+          );
       }
     }
 
