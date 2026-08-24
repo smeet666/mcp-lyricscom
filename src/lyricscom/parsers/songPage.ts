@@ -2,7 +2,8 @@
  * Parser for a lyrics.com song page.
  */
 
-import * as cheerio from "cheerio";
+import { load } from "cheerio";
+import type { CheerioAPI } from "cheerio";
 import { parseFailure } from "../../errors.js";
 import type { SongPage } from "../../types.js";
 import { cleanInlineText, cleanLyricsText } from "../../text/normalize.js";
@@ -14,7 +15,7 @@ export interface ParseSongOptions {
 }
 
 export function parseSongPage(html: string, options: ParseSongOptions): SongPage {
-  const $ = cheerio.load(html);
+  const $ = load(html);
 
   const title = cleanInlineText($(SEL.songTitle).first().text()) || null;
   const artist = cleanInlineText($(SEL.songArtist).first().text()) || null;
@@ -45,9 +46,9 @@ export function parseSongPage(html: string, options: ParseSongOptions): SongPage
  * Those anchors are unwrapped in the raw HTML rather than through the DOM,
  * because DOM-level removal loses the line breaks that give lyrics their shape.
  */
-function extractBodyText($: cheerio.CheerioAPI, body: ReturnType<cheerio.CheerioAPI>): string {
+function extractBodyText($: CheerioAPI, body: ReturnType<CheerioAPI>): string {
   const rawHtml = $.html(body);
   const withoutAnchors = rawHtml.replace(/<a[^>]*>([\s\S]*?)<\/a>/gi, "$1");
   const withNewlines = withoutAnchors.replace(/<br\s*\/?>/gi, "\n");
-  return cheerio.load(withNewlines).root().text();
+  return load(withNewlines).root().text();
 }
