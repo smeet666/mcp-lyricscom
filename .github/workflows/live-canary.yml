@@ -13,7 +13,7 @@ name: Live canary
 on:
   schedule:
     # 04:17 UTC. Off the hour, because everyone schedules on the hour.
-    - cron: "17 4 * * *"
+    - cron: "8 4 * * *"
   workflow_dispatch:
 
 # A single run at a time, so a slow night cannot overlap with the next one.
