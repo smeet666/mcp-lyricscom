@@ -2,6 +2,9 @@
  * Text cleaning for scraped content: HTML entities, mojibake, whitespace.
  */
 
+/** The letters UTF-8 read as Latin-1 leaves behind. */
+const MOJIBAKE_MARKS = /[ÃÂ]/;
+
 const HTML_ENTITIES: Record<string, string> = {
   amp: "&",
   lt: "<",
@@ -47,7 +50,7 @@ export function unescapeHtml(text: string): string {
  * kept when it removes replacement characters, so correct text is never touched.
  */
 export function fixEncodingIssues(text: string): string {
-  if (!(text && /[ÃÂ]/.test(text))) {
+  if (!(text && MOJIBAKE_MARKS.test(text))) {
     return text;
   }
   try {

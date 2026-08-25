@@ -7,6 +7,8 @@
  * parsing happens.
  */
 
+const CLOSING_HTML_TAG = /<\/html>/i;
+
 export type ResponseVerdict =
   | { kind: "ok"; html: string }
   | { kind: "throttled"; reason: ThrottleReason }
@@ -51,7 +53,7 @@ export function classifyResponse(status: number, body: string): ResponseVerdict 
   if (trimmed.length === 0) {
     return { kind: "throttled", reason: "empty-body" };
   }
-  if (trimmed.length < MIN_PLAUSIBLE_HTML && !/<\/html>/i.test(trimmed)) {
+  if (trimmed.length < MIN_PLAUSIBLE_HTML && !CLOSING_HTML_TAG.test(trimmed)) {
     return { kind: "throttled", reason: "short-body" };
   }
 

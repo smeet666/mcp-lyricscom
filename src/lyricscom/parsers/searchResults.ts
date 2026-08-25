@@ -13,6 +13,9 @@ import { cleanInlineText, cleanLyricsText } from "../../text/normalize.js";
 import { extractSongId, RESULTS_PER_PAGE, toAbsoluteUrl } from "../urls.js";
 import { SEL } from "./selectors.js";
 
+/** A year a record can plausibly carry, from the 1800s to this century. */
+const YEAR = /\b(1[89]\d{2}|20\d{2})\b/;
+
 export interface ParseSearchOptions {
   page: number;
   /** Reported in errors so a failure points at the request that caused it. */
@@ -84,7 +87,7 @@ export function parseSearchResults(html: string, options: ParseSearchOptions): S
 
 /** Year cells look like "1971" but are sometimes decorated or empty. */
 function parseYear(raw: string): number | null {
-  const match = /\b(1[89]\d{2}|20\d{2})\b/.exec(raw);
+  const match = YEAR.exec(raw);
   if (!match?.[1]) {
     return null;
   }

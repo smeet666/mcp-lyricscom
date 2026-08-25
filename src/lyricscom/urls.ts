@@ -4,6 +4,9 @@
 
 import { invalidInput } from "../errors.js";
 
+const ABSOLUTE_URL = /^https?:\/\//i;
+const DIGITS_ONLY = /^\d+$/;
+
 export const BASE_URL = "https://www.lyrics.com";
 
 /** lyrics.com renders 24 rows per search page. */
@@ -57,7 +60,7 @@ export function isLyricsComHost(rawUrl: string): boolean {
 /** Extract the numeric song id from a lyrics.com song path or absolute URL. */
 export function extractSongId(hrefOrUrl: string): string | null {
   let path = hrefOrUrl;
-  if (/^https?:\/\//i.test(hrefOrUrl)) {
+  if (ABSOLUTE_URL.test(hrefOrUrl)) {
     if (!isLyricsComHost(hrefOrUrl)) {
       return null;
     }
@@ -76,7 +79,7 @@ export function extractSongId(hrefOrUrl: string): string | null {
  */
 export function resolveSongRef(input: { id?: string; url?: string }): { id: string; url: string } {
   if (input.id) {
-    if (!/^\d+$/.test(input.id)) {
+    if (!DIGITS_ONLY.test(input.id)) {
       throw invalidInput(
         `"${input.id}" is not a lyrics.com song id.`,
         "Ids are digits only, as returned by the search tools.",

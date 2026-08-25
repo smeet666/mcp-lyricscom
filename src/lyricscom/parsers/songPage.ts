@@ -9,6 +9,9 @@ import type { SongPage } from "../../types.js";
 import { cleanInlineText, cleanLyricsText } from "../../text/normalize.js";
 import { SEL } from "./selectors.js";
 
+/** The wording the site puts in the title of a page holding no words. */
+const NO_LYRICS_FOUND = /no lyrics found/i;
+
 export interface ParseSongOptions {
   id: string;
   url: string;
@@ -26,7 +29,7 @@ export function parseSongPage(html: string, options: ParseSongOptions): SongPage
     // not a failure, so it is only treated as breakage when the page says
     // nothing about why the text is missing.
     const declaresNoLyrics =
-      $(SEL.songNoData).length > 0 || /no lyrics found/i.test($("title").text());
+      $(SEL.songNoData).length > 0 || NO_LYRICS_FOUND.test($("title").text());
     if (!declaresNoLyrics) {
       throw parseFailure(options.url, "no lyrics container and no 'no lyrics' marker");
     }
