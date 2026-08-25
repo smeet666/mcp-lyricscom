@@ -5,6 +5,7 @@
  * same markup, so one parser covers both.
  */
 
+import process from "node:process";
 import { load } from "cheerio";
 import { parseFailure } from "../../errors.js";
 import type { SearchPage, SongResult } from "../../types.js";
@@ -43,7 +44,7 @@ export function parseSearchResults(html: string, options: ParseSearchOptions): S
     const artist = cleanInlineText(row.find(SEL.resultArtist).first().text());
 
     const id = href ? extractSongId(href) : null;
-    if (!id || !title || !artist) {
+    if (!(id && title && artist)) {
       skipped += 1;
       return;
     }

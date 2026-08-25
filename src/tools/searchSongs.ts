@@ -109,7 +109,7 @@ function normalizeTitle(title: string): string {
 export function titleScore(candidate: string, query: string): number {
   const a = normalizeTitle(candidate);
   const b = normalizeTitle(query);
-  if (!a || !b) {
+  if (!(a && b)) {
     return 0;
   }
   if (a === b) {

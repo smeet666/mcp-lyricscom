@@ -11,6 +11,7 @@
  * Excluded from the ordinary CI run: enable with LYRICSCOM_LIVE=1.
  */
 
+import process from "node:process";
 import { describe, expect, it } from "vitest";
 import { createLogger, loadConfig } from "../../src/config.js";
 import { LyricsComClient } from "../../src/lyricscom/client.js";
