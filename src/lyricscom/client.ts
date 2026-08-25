@@ -20,6 +20,9 @@ import { parseSongPage } from "./parsers/songPage.js";
 import { RateLimiter } from "./rateLimiter.js";
 import { buildSearchUrl, resolveSongRef } from "./urls.js";
 
+/** The names a User-Agent carries when it passes traffic off as a browser. */
+const BROWSER_IDENTITY = /mozilla\/|applewebkit|chrome\/|safari\/|gecko/i;
+
 export interface LyricsComClientOptions {
   config?: Config;
   logger?: Logger;
@@ -45,7 +48,7 @@ export interface FetchOutcome<T> {
  * identity appended so it stays attributable.
  */
 function withGuarantees(config: Config): Config {
-  const userAgent = /mozilla\/|applewebkit|chrome\/|safari\/|gecko/i.test(config.userAgent)
+  const userAgent = BROWSER_IDENTITY.test(config.userAgent)
     ? `${config.userAgent} ${DEFAULT_USER_AGENT}`
     : config.userAgent;
   return {
