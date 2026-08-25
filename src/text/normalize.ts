@@ -47,7 +47,7 @@ export function unescapeHtml(text: string): string {
  * kept when it removes replacement characters, so correct text is never touched.
  */
 export function fixEncodingIssues(text: string): string {
-  if (!text || !/[ÃÂ]/.test(text)) {
+  if (!(text && /[ÃÂ]/.test(text))) {
     return text;
   }
   try {

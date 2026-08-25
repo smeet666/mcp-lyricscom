@@ -22,7 +22,7 @@ export interface LineMatch {
 
 /** First line containing `keyword`, using the two-pass matcher. */
 export function findMatchingLine(text: string, keyword: string): LineMatch | null {
-  if (!text || !keyword) {
+  if (!(text && keyword)) {
     return null;
   }
   const lines = text.split("\n");

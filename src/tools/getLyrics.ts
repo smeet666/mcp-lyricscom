@@ -59,7 +59,7 @@ export const getLyricsInput = strictInput({
     .number()
     .int()
     .min(200)
-    .max(20000)
+    .max(20_000)
     .default(6000)
     .describe("Maximum characters of lyrics text to return in this call."),
   offset: z

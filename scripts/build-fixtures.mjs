@@ -12,6 +12,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import process from "node:process";
 
 const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "test", "fixtures");
 
@@ -81,9 +82,9 @@ function buildSerpPage1() {
     const n = i + 1;
     rows.push(
       resultRow({
-        id: 1000000 + n,
+        id: 1_000_000 + n,
         artist: `Artist ${n}`,
-        artistId: 20000 + n,
+        artistId: 20_000 + n,
         title: `Placeholder Song ${n}`,
         album: i % 8 === 0 ? `Placeholder Album ${n}` : null,
         year: i % 12 === 0 ? 1970 + n : null,
@@ -97,9 +98,9 @@ function buildSerpPage1() {
   // A duplicate of row 1 with a bracketed suffix, so dedupe has something to do.
   rows.push(
     resultRow({
-      id: 1999999,
+      id: 1_999_999,
       artist: "Artist 1",
-      artistId: 20001,
+      artistId: 20_001,
       title: "Placeholder Song 1 [Deluxe Edition]",
       album: "Placeholder Album 1",
       year: 1971,
