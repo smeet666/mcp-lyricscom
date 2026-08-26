@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "mcp-lyricscom",
   "display_name": "Lyrics.com",
-  "version": "1.4.1",
+  "version": "2.0.0",
   "description": "MCP server for lyrics.com. Search song lyrics by word or by title, and fetch full lyrics. No API key required.",
   "long_description": "Find a song from a word inside its lyrics, or by title, then read the full text. No API key, no account.",
   "author": {
