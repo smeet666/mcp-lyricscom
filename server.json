@@ -19,12 +19,12 @@
     "url": "https://github.com/smeet666/mcp-lyricscom",
     "source": "github"
   },
-  "version": "2.0.0",
+  "version": "2.0.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "mcp-lyricscom",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "transport": {
         "type": "stdio"
       },
@@ -48,8 +48,8 @@
     },
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/smeet666/mcp-lyricscom/releases/download/v2.0.0/mcp-lyricscom-2.0.0.mcpb",
-      "version": "2.0.0",
+      "identifier": "https://github.com/smeet666/mcp-lyricscom/releases/download/v2.0.1/mcp-lyricscom-2.0.1.mcpb",
+      "version": "2.0.1",
       "transport": {
         "type": "stdio"
       }
