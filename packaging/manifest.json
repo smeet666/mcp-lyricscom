@@ -41,15 +41,127 @@
   "tools": [
     {
       "name": "search_lyrics",
-      "description": "Find songs containing a word or phrase in their lyrics."
+      "description": "Find songs containing a word or phrase in their lyrics.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Word or short phrase to look for inside the lyrics, for example 'autrefois'."
+          },
+          "limit": {
+            "default": 10,
+            "description": "Maximum songs to return from this page.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "page": {
+            "default": 1,
+            "description": "Result page on lyrics.com. Each page holds up to 24 raw results.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "verify": {
+            "default": "snippet",
+            "description": "How to confirm the query really appears in the lyrics. 'snippet' checks the excerpt lyrics.com already returned and costs nothing. 'full' fetches up to 5 song pages and checks the complete lyrics, which is slow and can trigger rate limiting. 'none' disables filtering.",
+            "type": "string",
+            "enum": ["snippet", "full", "none"]
+          },
+          "include_excerpt": {
+            "default": true,
+            "description": "Include the matching lyric line excerpt in each result.",
+            "type": "boolean"
+          }
+        },
+        "required": ["query"],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      }
     },
     {
       "name": "search_songs",
-      "description": "Find songs by title, optionally narrowed by artist."
+      "description": "Find songs by title, optionally narrowed by artist.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Song title, or part of it."
+          },
+          "artist": {
+            "description": "Optional artist name, matched case-insensitively against each result.",
+            "type": "string",
+            "maxLength": 120
+          },
+          "limit": {
+            "default": 10,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "page": {
+            "default": 1,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "match": {
+            "default": "loose",
+            "description": "'strict' keeps only results whose title matches the query as a whole title, ignoring suffixes such as '(Remastered)'. 'loose' keeps anything lyrics.com returned, best match first.",
+            "type": "string",
+            "enum": ["loose", "strict"]
+          }
+        },
+        "required": ["title"],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      }
     },
     {
       "name": "get_lyrics",
-      "description": "Read one song's lyrics by id."
+      "description": "Read one song's lyrics by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "lyrics.com numeric song id, as returned by the search tools. Preferred over 'url'.",
+            "type": "string",
+            "pattern": "^\\d+$"
+          },
+          "url": {
+            "description": "Full lyrics.com song URL. Only www.lyrics.com URLs are accepted. Ignored when 'id' is given.",
+            "type": "string",
+            "format": "uri"
+          },
+          "max_chars": {
+            "default": 6000,
+            "description": "Maximum characters of lyrics text to return in this call.",
+            "type": "integer",
+            "minimum": 200,
+            "maximum": 20000
+          },
+          "offset": {
+            "default": 0,
+            "description": "Character offset to resume from, for lyrics longer than max_chars.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "highlight": {
+            "description": "Optional word. When set, the response reports whether it appears in the lyrics and on which line.",
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      }
     }
   ],
   "compatibility": {

@@ -8,17 +8,23 @@
 [![M8ven](https://m8ven.ai/badge/mcp/smeet666-mcp-lyricscom-pptp4t?variant=verified)](https://m8ven.ai/mcp/smeet666-mcp-lyricscom-pptp4t)
 [![Install in Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=lyricscom&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIm1jcC1seXJpY3Njb20iXX0%3D)
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install-0098FF?style=flat&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=lyricscom&config=%7B%22name%22%3A%22lyricscom%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22mcp-lyricscom%22%5D%7D)
+
 <!-- m8ven-verify: 3c4d434dcafaac3c25dc86631fb1393b -->
 
-An [MCP](https://modelcontextprotocol.io) server for [lyrics.com](https://www.lyrics.com).
-Search songs by a word in their lyrics, by title, and read the full text.
-**No API key, no account, no configuration.**
+[lyrics.com](https://www.lyrics.com) is a large public catalogue of song lyrics.
+It files a song under its title, its artist, the album it appeared on and the
+year, and it holds the words themselves. Its search reaches inside those words.
 
-_(Version française plus bas / [French version below](#mcp-lyricscom-français))_
+This server connects a chat client to that catalogue. You can search for a song
+by a line you remember, search by title and artist, and read the words of one
+song, a slice at a time, with the words you were looking for located in the text.
+It needs no API key and no account.
+
+_[Version française](#mcp-lyricscom-français)_
 
 ---
 
-## Quickstart
+## Install
 
 **One-click install**
 
@@ -44,6 +50,8 @@ claude mcp add lyricscom -- npx -y mcp-lyricscom
 }
 ```
 
+Node 24 or later is required, and no environment variable has to be set.
+
 ### With Docker
 
 ```json
@@ -57,79 +65,248 @@ claude mcp add lyricscom -- npx -y mcp-lyricscom
 }
 ```
 
-`-i` keeps stdin open, which is where the protocol travels, and no `-t` is
-passed: a TTY rewrites the stream and breaks it. The container needs outbound
-HTTPS to `www.lyrics.com`, and nothing else: no volume, no port, no environment variable, no credential.
+`-i` keeps stdin open, which is where the protocol travels, and `-t` is left out
+because a TTY rewrites the stream. The container needs outbound HTTPS to
+`www.lyrics.com`, and nothing else: no volume, no port, no credential.
 
-That is the whole setup. There is nothing to sign up for.
+### Bundle, without npm
 
-**Bundle, without npm**
+Download `mcp-lyricscom-2.0.0.mcpb` from
+[the latest release](https://github.com/smeet666/mcp-lyricscom/releases/latest)
+and open it. A client that supports MCP bundles installs it on its own, with no
+npm and no configuration file to edit. The bundle carries its dependencies, so
+nothing is fetched at install time.
 
-Download `mcp-lyricscom-<version>.mcpb` from
-[the latest release](https://github.com/smeet666/mcp-lyricscom/releases/latest) and open
-it. A client that supports MCP bundles installs it on its own, with no npm and
-no configuration file to edit. The bundle carries its dependencies, so nothing
-is fetched at install time.
+## What you can ask
+
+- "Which song goes 'I've got a hand for you'?"
+- "Find me the lyrics of Wichita Lineman by Glen Campbell."
+- "Read me the second half of those words."
+- "Where does the word 'lineman' appear in that song?"
+- "What albums is that song on?"
+
+The ordinary path runs from a search to a reading: a row carries an `id`, and
+`get_lyrics` takes that id.
 
 ## Tools
 
-| Tool            | What it does                                                                                 | Key parameters                                        |
-| --------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `search_lyrics` | Finds songs whose **lyrics contain a word or phrase**, with the matching line as an excerpt. | `query`, `limit`, `page`, `verify`, `include_excerpt` |
-| `search_songs`  | Finds songs **by title**, optionally narrowed by artist.                                     | `title`, `artist`, `limit`, `page`, `match`           |
-| `get_lyrics`    | Reads the **full lyrics** of one song, by id or URL.                                         | `id`, `url`, `max_chars`, `offset`, `highlight`       |
+| Tool            | What it does                                    |
+| --------------- | ----------------------------------------------- |
+| `search_lyrics` | Finds a song from a line inside its words.      |
+| `search_songs`  | Finds songs by title, narrowed by artist.       |
+| `get_lyrics`    | Reads the words of one song, a slice at a time. |
 
-The two search tools return a lyrics.com `id` for every result; `get_lyrics` takes that id.
-That is the intended chain: search, then read.
+### `search_lyrics`
 
-### Things worth knowing
+Finds a song from words inside its lyrics. The site ranks loosely, so a match is
+checked before it is served.
 
-**Search really checks the lyrics.** lyrics.com's own search also returns title
-matches and loose matches. `search_lyrics` filters them out locally, using a
-word-boundary matcher, so a result is a song where the word genuinely appears.
-`coup` does not match `beaucoup`, but `enfant` does match `enfants`. Set
-`verify: "none"` to see the raw, unfiltered list.
+| Argument          | Type                                           | Required | What it does                            |
+| ----------------- | ---------------------------------------------- | -------- | --------------------------------------- |
+| `query`           | string, 1 to 120 characters                    | yes      | The line, or part of it, to look for.   |
+| `limit`           | integer, 1 to 50, default `10`                 | no       | Rows to serve.                          |
+| `page`            | integer, 1 to 20, default `1`                  | no       | Which page of rows.                     |
+| `verify`          | `snippet`, `full` or `none`, default `snippet` | no       | How to confirm the words really appear. |
+| `include_excerpt` | boolean, default `true`                        | no       | Carry the matching line with each row.  |
 
-**Pagination is yours to drive.** One call fetches one page (24 rows on
-lyrics.com). The response carries `has_more` and `next_page`. Raising `limit`
-does not fetch more pages, on purpose: chaining several fetches inside a single
-tool call is the fastest way to get rate limited.
+`verify` decides what a row is worth. `snippet` checks the excerpt the site
+already returned and costs nothing. `full` fetches up to five song pages and
+checks the complete words, which is slow and can bring on rate limiting. `none`
+serves what the site ranked, unchecked.
 
-**Some songs have no lyrics.** A valid lyrics.com page can simply have no text
-on file. That comes back as `status: "no_lyrics"` with a successful result, not
-an error, so there is nothing to retry.
+**In return:** rows carrying `id`, which `get_lyrics` takes; `title`; `artist`;
+`album` and `year`, `null` where the catalogue states none; `source_url`; and
+`excerpt`, the matching line. `raw_result_count` is what the site returned and
+`filtered_out` how many rows the check removed, so the two together say how loose
+the ranking was. `has_more` and `next_page` continue.
 
-**Rate limiting is visible, not silent.** lyrics.com answers a throttled request
-with an empty body rather than a normal error code. This server detects that and
-returns an explicit `throttled` error telling you to wait and try again. It never
-reports throttling as "no results found", which would be indistinguishable from a
-genuine answer.
+### `search_songs`
+
+Finds songs by title, narrowed by artist.
+
+| Argument | Type                                 | Required | What it does                            |
+| -------- | ------------------------------------ | -------- | --------------------------------------- |
+| `title`  | string, 1 to 120 characters          | yes      | The song title, or part of it.          |
+| `artist` | string, up to 120 characters         | no       | Keep the songs credited to this artist. |
+| `limit`  | integer, 1 to 50, default `10`       | no       | Rows to serve.                          |
+| `page`   | integer, 1 to 20, default `1`        | no       | Which page of rows.                     |
+| `match`  | `loose` or `strict`, default `loose` | no       | How closely the artist has to match.    |
+
+**In return:** the rows `search_lyrics` returns, with `artist_filter` echoing
+what was asked for and `filtered_out` counting what the artist restriction
+removed. `strict` keeps the artists whose name matches as written; `loose`
+accepts a name written differently.
+
+### `get_lyrics`
+
+Reads the words of one song. Long lyrics are served a slice at a time.
+
+| Argument    | Type                                  | Required   | What it does                              |
+| ----------- | ------------------------------------- | ---------- | ----------------------------------------- |
+| `id`        | string                                | one of two | The song id a search row carries.         |
+| `url`       | a lyrics.com URL                      | one of two | The address of the song page.             |
+| `max_chars` | integer, 200 to 20000, default `6000` | no         | Characters of text to serve in this call. |
+| `offset`    | integer, 0 or more, default `0`       | no         | Character offset to resume from.          |
+| `highlight` | string, up to 120 characters          | no         | Words to locate inside the text.          |
+
+**In return:** `status`, reading `ok` or `no_lyrics` for a page the site holds
+without words; `title`, `artist` and `source_url`; and `lyrics`, the slice
+itself. The reading is described by `total_chars`, `returned_chars`, `offset`,
+`next_offset` and `truncated`: pass `next_offset` back to read on, and `null`
+there means the end. `line_count` counts the lines of the slice, and `highlight`
+answers for each word whether it was `found` and on which `line_number`, which is
+`null` when it was not.
 
 ## Configuration
 
-Every variable is optional. Set them in the `env` block of your MCP client config.
+Every variable is optional. Set them in the `env` block of your client config.
 
-| Variable                      | Default                               | Purpose                                                                                                   |
-| ----------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `LYRICSCOM_USER_AGENT`        | `mcp-lyricscom/<version> (+repo url)` | User-Agent sent to lyrics.com. See below.                                                                 |
-| `LYRICSCOM_MIN_INTERVAL_MS`   | `1100`                                | Minimum gap between requests. Raise it if you hit throttling. Values below 500 ms are ignored, see below. |
-| `LYRICSCOM_TIMEOUT_MS`        | `15000`                               | Per-request timeout.                                                                                      |
-| `LYRICSCOM_MAX_RETRIES`       | `3`                                   | Retries on throttling and transient errors.                                                               |
-| `LYRICSCOM_CACHE_TTL_MS`      | `900000`                              | In-memory page cache lifetime (15 minutes).                                                               |
-| `LYRICSCOM_CACHE_MAX_ENTRIES` | `200`                                 | In-memory page cache size.                                                                                |
-| `LYRICSCOM_LOG_LEVEL`         | `error`                               | `silent`, `error`, `info` or `debug`. Logs go to stderr.                                                  |
+| Variable                      | Default              | What it does                                                                       |
+| ----------------------------- | -------------------- | ---------------------------------------------------------------------------------- |
+| `LYRICSCOM_USER_AGENT`        | the project identity | Names your application to the site, with an address where a person can be reached. |
+| `LYRICSCOM_MIN_INTERVAL_MS`   | `1100`               | Gap between two requests, from 500 to 60000.                                       |
+| `LYRICSCOM_TIMEOUT_MS`        | `15000`              | Deadline for one request, from 1000 to 120000.                                     |
+| `LYRICSCOM_MAX_RETRIES`       | `3`                  | Attempts after a transient failure, from 0 to 10.                                  |
+| `LYRICSCOM_CACHE_TTL_MS`      | `900000`             | How long an answer stays in memory, from 0 to 86400000.                            |
+| `LYRICSCOM_CACHE_MAX_ENTRIES` | `200`                | Answers held in memory at once, from 0 to 10000.                                   |
+| `LYRICSCOM_LOG_LEVEL`         | `error`              | `silent`, `error`, `info` or `debug`, written to stderr.                           |
+
+A value outside its range falls back to the default, and the reason is written to
+stderr.
+
+**On the User-Agent.** This server names the project and links to its repository,
+and the site serves that. It does refuse some generic tool agents outright: a
+plain `curl` gets a 403. A `blocked_user_agent` error means the identity was
+refused, and `LYRICSCOM_USER_AGENT` lets you set one of your choosing. What you
+put there is your call and your responsibility.
+
+## Errors
+
+Every failure carries one of these codes, a message, and where it helps a hint
+naming the next move.
+
+| Code                 | What happened                                           | What to do                                                                          |
+| -------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `not_found`          | The site answered, and holds no such song.              | Check the id with `search_songs`.                                                   |
+| `invalid_input`      | The arguments were refused before any request went out. | Read the message, which names the argument.                                         |
+| `throttled`          | The site asked this client to slow down.                | Wait, then call again with the same arguments. The song is still there.             |
+| `blocked_user_agent` | The site refused the identity this client sent.         | Set `LYRICSCOM_USER_AGENT`.                                                         |
+| `parse_failure`      | The page loaded and the expected content was absent.    | Report it at [the issue tracker](https://github.com/smeet666/mcp-lyricscom/issues). |
+| `network_error`      | The request did not complete.                           | Try again shortly.                                                                  |
+| `timeout`            | The request passed its deadline.                        | Raise `LYRICSCOM_TIMEOUT_MS`, or ask for a smaller `max_chars`.                     |
+
+`throttled` and `blocked_user_agent` are this server's two names for a refusal to
+serve, and a caller reading several sources normalises them onto whatever it
+calls rate limiting.
+
+## As a library
+
+The layer reading the site is published on its own, with its pacing, its cache
+and its errors, and with no protocol attached.
+
+```ts
+import { LyricsComClient } from "mcp-lyricscom/client";
+
+const client = new LyricsComClient();
+const { data, cached } = await client.getSong({ id: "1234567" });
+console.log(data.title, data.artist, cached);
+```
+
+`search` and `getSong` each answer `{ data, cached }`, and throw an error
+carrying one of the codes above. The floor between two requests holds here as
+well.
+
+## Pacing and attribution
+
+Requests go out one at a time with at least a second between them, and the floor
+of half a second holds however the server is configured. A `verify: "full"`
+search fetches up to five song pages, which is the most expensive thing this
+server does.
+
+Every result carries the artist, the title and the address of the song page. Song
+lyrics are the work of their authors and publishers. This project claims no
+rights over them, ships no database of them, and writes nothing to disk.
+
+This MCP server is an unofficial project, with no affiliation to lyrics.com.
+
+## Privacy
+
+This server collects nothing about you and sends nothing to its author. It runs
+on your machine, contacts `www.lyrics.com` and nothing else, holds its answers in memory
+while it runs, and writes nothing to disk.
+[PRIVACY.md](PRIVACY.md) states what a request carries and which settings change
+any of it.
+
+## Development
+
+```bash
+npm install
+npm run build:fixtures
+npm test
+npm run check
+```
+
+Tests run against generated fixtures and make no network request. The live suite,
+`npm run test:live`, makes one request per route and runs nightly against the
+site itself.
+
+## Contributing
+
+Bugs, questions and ideas belong in
+[the issue tracker](https://github.com/smeet666/mcp-lyricscom/issues). Pull
+requests are welcome; opening an issue first helps agree on the shape of the
+change. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+MIT, see [LICENSE](LICENSE). The lyrics belong to their authors and publishers.
+
+---
+
+<a name="mcp-lyricscom-français"></a>
+
+# mcp-lyricscom (français)
+
+_[English version](#mcp-lyricscom)_
+
+[lyrics.com](https://www.lyrics.com) est un grand catalogue public de paroles de
+chansons. Il classe une chanson sous son titre, son artiste, l'album où elle a
+paru et l'année, et il contient les paroles elles-mêmes. Sa recherche va à
+l'intérieur de ces paroles.
+
+Ce serveur relie un client de conversation à ce catalogue. On peut y chercher une
+chanson par un vers dont on se souvient, chercher par titre et par artiste, et
+lire les paroles d'une chanson par tranches, avec les mots cherchés localisés
+dans le texte. Aucune clé d'API, aucun compte.
+
+## Installation
+
+**Installation en un clic**
+
+[![Install in Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=lyricscom&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIm1jcC1seXJpY3Njb20iXX0%3D)
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install-0098FF?style=flat&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=lyricscom&config=%7B%22name%22%3A%22lyricscom%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22mcp-lyricscom%22%5D%7D)
+
+**Claude Code**
+
+```bash
+claude mcp add lyricscom -- npx -y mcp-lyricscom
+```
+
+**Claude Desktop, Cursor, et tout client au format de configuration standard**
 
 ```json
 {
   "mcpServers": {
     "lyricscom": {
       "command": "npx",
-      "args": ["-y", "mcp-lyricscom"],
-      "env": { "LYRICSCOM_MIN_INTERVAL_MS": "1500" }
+      "args": ["-y", "mcp-lyricscom"]
     }
   }
 }
 ```
+
+Node 24 ou plus récent est nécessaire, et aucune variable d'environnement n'est à
+renseigner.
 
 ### Avec Docker
 
@@ -144,294 +321,203 @@ Every variable is optional. Set them in the `env` block of your MCP client confi
 }
 ```
 
-`-i` garde l'entrée standard ouverte, qui est le canal du protocole, et aucun
-`-t` n'est passé : un terminal réécrit le flux et le casse. Le conteneur a besoin
-d'un accès HTTPS sortant vers `www.lyrics.com`, et de rien d'autre :
-aucun volume, aucun port, aucune variable d'environnement, aucun identifiant.
+`-i` garde l'entrée standard ouverte, qui est le canal du protocole, et `-t` est
+omis parce qu'un TTY réécrit le flux. Le conteneur a besoin d'un accès HTTPS
+sortant vers `www.lyrics.com`, et de rien d'autre : aucun volume, aucun port,
+aucun identifiant.
 
-### About the User-Agent
+### Bundle, sans npm
 
-This server identifies itself honestly by default, naming the project and linking
-to this repository. lyrics.com serves that fine today.
+Téléchargez `mcp-lyricscom-2.0.0.mcpb` depuis
+[la dernière publication](https://github.com/smeet666/mcp-lyricscom/releases/latest)
+et ouvrez-le. Un client qui gère les bundles MCP l'installe seul, sans npm et
+sans fichier de configuration à modifier. Le bundle emporte ses dépendances, donc
+rien n'est téléchargé à l'installation.
 
-It does block some generic tool agents outright: a plain `curl/8.5.0` gets a 403.
-If you ever see a `blocked_user_agent` error, set `LYRICSCOM_USER_AGENT` to a
-value of your choosing. That override exists so you are not stuck, and what you
-put in it is your call and your responsibility.
+## Ce qu'on peut demander
 
-## Troubleshooting
+- « Quelle est la chanson qui dit "I've got a hand for you" ? »
+- « Trouve-moi les paroles de Wichita Lineman par Glen Campbell. »
+- « Lis-moi la seconde moitié de ces paroles. »
+- « Où apparaît le mot "lineman" dans cette chanson ? »
+- « Sur quels albums cette chanson figure-t-elle ? »
 
-**"throttled" errors.** lyrics.com is rate limiting you. The server already
-retries with backoff and slows itself down on its own, so seeing this error means
-those retries were exhausted. Once the site starts throttling, the window
-commonly lasts several minutes, not seconds: wait a minute or more before trying
-again, and raise `LYRICSCOM_MIN_INTERVAL_MS` if it keeps happening. A `throttled`
-error does not mean your query has no results.
+Le chemin ordinaire va d'une recherche à une lecture : une ligne porte un `id`,
+et `get_lyrics` reprend cet identifiant.
 
-**"blocked_user_agent" errors.** See the User-Agent section above.
+## Les outils
 
-**"parse_failure" errors.** lyrics.com changed its page layout and the server
-could not read the response. Please [open an issue](https://github.com/smeet666/mcp-lyricscom/issues)
-with the query you used. The server deliberately reports this loudly instead of
-pretending it found nothing.
+| Outil           | Ce qu'il fait                                          |
+| --------------- | ------------------------------------------------------ |
+| `search_lyrics` | Trouve une chanson à partir d'un vers de ses paroles.  |
+| `search_songs`  | Trouve des chansons par titre, resserrées par artiste. |
+| `get_lyrics`    | Lit les paroles d'une chanson, par tranches.           |
 
-**Empty results.** If `raw_result_count` is greater than zero while `results` is
-empty, lyrics.com did return rows but none of them actually contain your word.
-Try `verify: "none"` to see them anyway.
+### `search_lyrics`
 
-## How it works
+Trouve une chanson à partir de mots contenus dans ses paroles. Le site classe
+largement, donc une correspondance est vérifiée avant d'être servie.
 
-There is no lyrics.com API. The server requests the same public pages you would
-open in a browser and reads them with [cheerio](https://cheerio.js.org). It
-fetches one page at a time, roughly one request per second, backs off when the
-site pushes back, and keeps a small in-memory cache so repeated questions about
-the same song do not hit the site again.
+| Argument          | Type                                          | Requis | Ce qu'il fait                                  |
+| ----------------- | --------------------------------------------- | ------ | ---------------------------------------------- |
+| `query`           | chaîne, 1 à 120 caractères                    | oui    | Le vers, ou une partie, à chercher.            |
+| `limit`           | entier, 1 à 50, défaut `10`                   | non    | Lignes à servir.                               |
+| `page`            | entier, 1 à 20, défaut `1`                    | non    | Quelle page de lignes.                         |
+| `verify`          | `snippet`, `full` ou `none`, défaut `snippet` | non    | Comment confirmer que les mots y figurent.     |
+| `include_excerpt` | booléen, défaut `true`                        | non    | Porter le vers correspondant sur chaque ligne. |
 
-## Development
+`verify` décide de ce que vaut une ligne. `snippet` vérifie l'extrait que le site
+a déjà rendu et ne coûte rien. `full` va chercher jusqu'à cinq pages de chansons
+et vérifie les paroles entières, ce qui est lent et peut déclencher une
+limitation. `none` sert ce que le site a classé, sans vérification.
 
-```bash
-npm install
-npm run build:fixtures   # regenerate the HTML test fixtures
-npm test                 # unit tests, no network
-npm run typecheck
-npm run build
-LYRICSCOM_LIVE=1 npm run test:live   # hits the real site, excluded from CI
-npm run inspector        # explore the tools in the MCP Inspector
-```
+**En retour :** des lignes portant `id`, que `get_lyrics` reprend ; `title` ;
+`artist` ; `album` et `year`, `null` là où le catalogue n'indique rien ;
+`source_url` ; et `excerpt`, le vers correspondant. `raw_result_count` est ce que
+le site a rendu et `filtered_out` le nombre de lignes que la vérification a
+retirées, si bien que les deux ensemble disent à quel point le classement était
+large. `has_more` et `next_page` poursuivent.
 
-The fixtures are generated, not scraped: they reproduce lyrics.com's markup
-structure with placeholder text, so the parser tests are deterministic and no
-copyrighted lyrics live in this repository.
+### `search_songs`
 
-The scraping layer (`src/lyricscom`, `src/text`) does not import the MCP SDK and
-is published separately as `mcp-lyricscom/client`, so it can be used as a plain
-library.
+Trouve des chansons par titre, resserrées par artiste.
 
-## Lyrics and copyright
+| Argument | Type                                | Requis | Ce qu'il fait                                  |
+| -------- | ----------------------------------- | ------ | ---------------------------------------------- |
+| `title`  | chaîne, 1 à 120 caractères          | oui    | Le titre de la chanson, ou une partie.         |
+| `artist` | chaîne, jusqu'à 120 caractères      | non    | Ne garder que les chansons de cet artiste.     |
+| `limit`  | entier, 1 à 50, défaut `10`         | non    | Lignes à servir.                               |
+| `page`   | entier, 1 à 20, défaut `1`          | non    | Quelle page de lignes.                         |
+| `match`  | `loose` ou `strict`, défaut `loose` | non    | La rigueur de la correspondance sur l'artiste. |
 
-Song lyrics are copyrighted works owned by their authors and publishers. This
-project claims no rights over them.
+**En retour :** les lignes que rend `search_lyrics`, avec `artist_filter` qui
+redonne ce qui a été demandé et `filtered_out` qui compte ce que la restriction
+sur l'artiste a retiré. `strict` garde les artistes dont le nom correspond tel
+qu'écrit ; `loose` accepte un nom écrit autrement.
 
-This server is a client. It fetches the same public lyrics.com pages you could
-open in a browser, on demand, one request at a time, in response to an explicit
-request from you or your assistant. It does not crawl the site, does not build a
-lyrics database, and does not write anything to disk. Pages are held in memory
-for a few minutes so that repeated questions do not hit the site again.
+### `get_lyrics`
 
-Every result carries the artist, the title, and the source URL. If you display or
-reuse anything this server returns, keep that attribution and link back to the
-source page.
+Lit les paroles d'une chanson. Des paroles longues sont servies par tranches.
 
-The server honours lyrics.com's robots.txt: none of the endpoints it uses are
-disallowed there, and it paces itself to roughly one request per second. That
-pacing is enforced: `LYRICSCOM_MIN_INTERVAL_MS` is refused below 500 ms, and a
-lower value falls back to the standard interval with a warning on stderr. Raise
-it to slow the client down further.
+| Argument    | Type                               | Requis        | Ce qu'il fait                                |
+| ----------- | ---------------------------------- | ------------- | -------------------------------------------- |
+| `id`        | chaîne                             | l'un des deux | L'identifiant que porte une ligne.           |
+| `url`       | une adresse lyrics.com             | l'un des deux | L'adresse de la page de la chanson.          |
+| `max_chars` | entier, 200 à 20000, défaut `6000` | non           | Caractères de texte à servir dans cet appel. |
+| `offset`    | entier, 0 ou plus, défaut `0`      | non           | Position en caractères où reprendre.         |
+| `highlight` | chaîne, jusqu'à 120 caractères     | non           | Des mots à localiser dans le texte.          |
 
-This is an unofficial project, with no affiliation to, endorsement by, or
-sponsorship from lyrics.com or STANDS4 Ltd. Use it in accordance with lyrics.com's
-terms of service and the copyright law that applies to you.
-
-## Contributing
-
-Bugs, questions and ideas all belong in
-[the issue tracker](https://github.com/smeet666/mcp-lyricscom/issues). Pull requests
-are welcome; please open an issue first so we can agree on what the right
-answer is before you write it. [CONTRIBUTING.md](CONTRIBUTING.md) has the
-detail, and [SECURITY.md](SECURITY.md) covers anything exploitable.
-
-## Support
-
-These servers are free and stay free. If one of them saved you an afternoon,
-you can [buy me a coffee](https://buymeacoffee.com/smeet666).
-
-## License
-
-MIT. See [LICENSE](./LICENSE). The license covers this source code only, not the
-lyrics retrieved through it.
-
----
-
-<a name="mcp-lyricscom-français"></a>
-
-# mcp-lyricscom (français)
-
-Un serveur [MCP](https://modelcontextprotocol.io) pour [lyrics.com](https://www.lyrics.com).
-Cherchez des chansons par un mot présent dans les paroles, par titre, et lisez le
-texte complet. **Sans clé d'API, sans compte, sans configuration.**
-
-## Démarrage rapide
-
-**Installation en un clic**
-
-[![Install in Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=lyricscom&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIm1jcC1seXJpY3Njb20iXX0%3D)
-[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install-0098FF?style=flat&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=lyricscom&config=%7B%22name%22%3A%22lyricscom%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22mcp-lyricscom%22%5D%7D)
-
-**Claude Code**
-
-```bash
-claude mcp add lyricscom -- npx -y mcp-lyricscom
-```
-
-**Claude Desktop, Cursor, et tout client utilisant le format de configuration standard**
-
-```json
-{
-  "mcpServers": {
-    "lyricscom": {
-      "command": "npx",
-      "args": ["-y", "mcp-lyricscom"]
-    }
-  }
-}
-```
-
-C'est toute l'installation. Il n'y a aucune inscription.
-
-**Bundle, sans npm**
-
-Téléchargez `mcp-lyricscom-<version>.mcpb` depuis
-[la dernière release](https://github.com/smeet666/mcp-lyricscom/releases/latest) et
-ouvrez-le. Un client compatible avec les bundles MCP l'installe seul, sans npm
-ni fichier de configuration à modifier. Le bundle embarque ses dépendances,
-donc rien n'est téléchargé à l'installation.
-
-## Outils
-
-| Outil           | Rôle                                                                                                                | Paramètres principaux                                 |
-| --------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `search_lyrics` | Trouve les chansons dont les **paroles contiennent un mot ou une phrase**, avec la ligne correspondante en extrait. | `query`, `limit`, `page`, `verify`, `include_excerpt` |
-| `search_songs`  | Trouve des chansons **par titre**, éventuellement restreintes à un artiste.                                         | `title`, `artist`, `limit`, `page`, `match`           |
-| `get_lyrics`    | Lit les **paroles complètes** d'une chanson, par id ou par URL.                                                     | `id`, `url`, `max_chars`, `offset`, `highlight`       |
-
-Les deux outils de recherche renvoient un `id` lyrics.com pour chaque résultat, et
-`get_lyrics` prend cet id. C'est l'enchaînement prévu : chercher, puis lire.
-
-### Ce qu'il faut savoir
-
-**La recherche vérifie vraiment les paroles.** La recherche de lyrics.com renvoie
-aussi des correspondances de titre et des à-peu-près. `search_lyrics` les écarte
-localement, avec un matcher qui respecte les frontières de mot : un résultat est
-donc une chanson où le mot est réellement présent. `coup` ne matche pas
-`beaucoup`, mais `enfant` matche bien `enfants`. Mettez `verify: "none"` pour voir
-la liste brute.
-
-**C'est vous qui paginez.** Un appel récupère une page (24 lignes chez
-lyrics.com). La réponse porte `has_more` et `next_page`. Augmenter `limit` ne va
-pas chercher plus de pages, volontairement : enchaîner plusieurs requêtes dans un
-seul appel d'outil est le meilleur moyen de se faire limiter.
-
-**Certaines chansons n'ont pas de paroles.** Une page lyrics.com valide peut
-simplement n'avoir aucun texte enregistré. Cela revient en `status: "no_lyrics"`
-avec un résultat réussi, pas une erreur : inutile de réessayer.
-
-**La limitation de débit est visible, pas silencieuse.** lyrics.com répond à une
-requête limitée par un corps vide plutôt que par un code d'erreur normal. Ce
-serveur le détecte et renvoie une erreur `throttled` explicite, qui vous dit
-d'attendre et de réessayer. Il ne présente jamais une limitation comme « aucun
-résultat », ce qui serait indiscernable d'une vraie réponse.
+**En retour :** `status`, valant `ok` ou `no_lyrics` pour une page que le site
+contient sans paroles ; `title`, `artist` et `source_url` ; et `lyrics`, la
+tranche elle-même. La lecture est décrite par `total_chars`, `returned_chars`,
+`offset`, `next_offset` et `truncated` : redonnez `next_offset` pour poursuivre,
+et `null` marque la fin. `line_count` compte les lignes de la tranche, et
+`highlight` répond pour chaque mot s'il a été `found` et à quel `line_number`,
+`null` quand il ne l'a pas été.
 
 ## Configuration
 
-Toutes les variables sont optionnelles. Elles se déclarent dans le bloc `env` de
-la configuration de votre client MCP.
+Chaque variable est facultative. Elles se posent dans le bloc `env` de la
+configuration du client.
 
-| Variable                      | Défaut                                    | Rôle                                                                                                                    |
-| ----------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `LYRICSCOM_USER_AGENT`        | `mcp-lyricscom/<version> (+url du dépôt)` | User-Agent envoyé à lyrics.com. Voir plus bas.                                                                          |
-| `LYRICSCOM_MIN_INTERVAL_MS`   | `1100`                                    | Écart minimal entre deux requêtes. À augmenter en cas de limitation. Une valeur sous 500 ms est ignorée, voir plus bas. |
-| `LYRICSCOM_TIMEOUT_MS`        | `15000`                                   | Délai d'attente par requête.                                                                                            |
-| `LYRICSCOM_MAX_RETRIES`       | `3`                                       | Tentatives sur limitation et erreurs passagères.                                                                        |
-| `LYRICSCOM_CACHE_TTL_MS`      | `900000`                                  | Durée de vie du cache mémoire (15 minutes).                                                                             |
-| `LYRICSCOM_CACHE_MAX_ENTRIES` | `200`                                     | Taille du cache mémoire.                                                                                                |
-| `LYRICSCOM_LOG_LEVEL`         | `error`                                   | `silent`, `error`, `info` ou `debug`. Les logs vont sur stderr.                                                         |
+| Variable                      | Défaut               | Ce qu'elle fait                                                                   |
+| ----------------------------- | -------------------- | --------------------------------------------------------------------------------- |
+| `LYRICSCOM_USER_AGENT`        | l'identité du projet | Nomme votre application auprès du site, avec une adresse où joindre une personne. |
+| `LYRICSCOM_MIN_INTERVAL_MS`   | `1100`               | Écart entre deux requêtes, de 500 à 60000.                                        |
+| `LYRICSCOM_TIMEOUT_MS`        | `15000`              | Délai d'une requête, de 1000 à 120000.                                            |
+| `LYRICSCOM_MAX_RETRIES`       | `3`                  | Tentatives après un échec passager, de 0 à 10.                                    |
+| `LYRICSCOM_CACHE_TTL_MS`      | `900000`             | Durée pendant laquelle une réponse reste en mémoire, de 0 à 86400000.             |
+| `LYRICSCOM_CACHE_MAX_ENTRIES` | `200`                | Réponses gardées en mémoire à la fois, de 0 à 10000.                              |
+| `LYRICSCOM_LOG_LEVEL`         | `error`              | `silent`, `error`, `info` ou `debug`, écrit sur la sortie d'erreur.               |
 
-### À propos du User-Agent
+Une valeur hors de sa plage retombe sur le défaut, et la raison est écrite sur la
+sortie d'erreur.
 
-Le serveur s'identifie honnêtement par défaut, en nommant le projet et en pointant
-vers ce dépôt. lyrics.com l'accepte sans problème aujourd'hui.
+**À propos du User-Agent.** Ce serveur nomme le projet et renvoie vers son dépôt,
+et le site le sert. Il refuse en revanche certains agents d'outils génériques :
+un `curl` nu reçoit un 403. Une erreur `blocked_user_agent` signifie que
+l'identité envoyée a été refusée, et `LYRICSCOM_USER_AGENT` permet d'en poser une
+de votre choix. Ce que vous y mettez relève de votre décision et de votre
+responsabilité.
 
-Le site bloque en revanche certains agents d'outils génériques : un simple
-`curl/8.5.0` reçoit un 403. Si vous voyez une erreur `blocked_user_agent`,
-définissez `LYRICSCOM_USER_AGENT` à la valeur de votre choix. Cette surcharge
-existe pour que vous ne restiez pas bloqué ; ce que vous y mettez relève de votre
-décision et de votre responsabilité.
+## Erreurs
 
-## Dépannage
+Chaque échec porte un de ces codes, un message, et quand cela aide une indication
+du geste suivant.
 
-**Erreurs « throttled ».** lyrics.com vous limite. Le serveur réessaie déjà avec
-backoff et ralentit tout seul : voir cette erreur signifie que ces tentatives ont
-été épuisées. Une fois la limitation déclenchée, la fenêtre dure couramment
-plusieurs minutes, pas quelques secondes : attendez une minute ou plus avant de
-réessayer, et augmentez `LYRICSCOM_MIN_INTERVAL_MS` si cela persiste. Une erreur
-`throttled` ne signifie pas que votre requête n'a pas de résultats.
+| Code                 | Ce qui s'est passé                                 | Que faire                                                                                 |
+| -------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `not_found`          | Le site a répondu, et n'a pas cette chanson.       | Vérifiez l'identifiant avec `search_songs`.                                               |
+| `invalid_input`      | Les arguments ont été refusés avant toute requête. | Lisez le message, qui nomme l'argument.                                                   |
+| `throttled`          | Le site demande à ce client de ralentir.           | Attendez, puis rappelez avec les mêmes arguments. La chanson est toujours là.             |
+| `blocked_user_agent` | Le site a refusé l'identité envoyée par ce client. | Posez `LYRICSCOM_USER_AGENT`.                                                             |
+| `parse_failure`      | La page a chargé et le contenu attendu est absent. | Signalez-le sur [le suivi d'incidents](https://github.com/smeet666/mcp-lyricscom/issues). |
+| `network_error`      | La requête n'a pas abouti.                         | Réessayez sous peu.                                                                       |
+| `timeout`            | La requête a dépassé son délai.                    | Augmentez `LYRICSCOM_TIMEOUT_MS`, ou demandez un `max_chars` plus petit.                  |
 
-**Erreurs « blocked_user_agent ».** Voir la section User-Agent ci-dessus.
+`throttled` et `blocked_user_agent` sont les deux noms que ce serveur donne à un
+refus de servir, et un appelant qui lit plusieurs sources les ramène sur ce qu'il
+appelle une limitation de débit.
 
-**Erreurs « parse_failure ».** lyrics.com a changé la structure de ses pages et le
-serveur n'a pas su lire la réponse. Merci d'[ouvrir une issue](https://github.com/smeet666/mcp-lyricscom/issues)
-en indiquant la requête utilisée. Le serveur signale volontairement ce cas au lieu
-de faire comme s'il n'avait rien trouvé.
+## Comme bibliothèque
 
-**Résultats vides.** Si `raw_result_count` est supérieur à zéro alors que
-`results` est vide, lyrics.com a bien renvoyé des lignes mais aucune ne contient
-réellement votre mot. Essayez `verify: "none"` pour les voir quand même.
+La couche qui lit le site est publiée seule, avec son rythme, son cache et ses
+erreurs, sans protocole attaché.
 
-## Fonctionnement
+```ts
+import { LyricsComClient } from "mcp-lyricscom/client";
 
-lyrics.com n'a pas d'API. Le serveur demande les mêmes pages publiques que celles
-que vous ouvririez dans un navigateur et les lit avec
-[cheerio](https://cheerio.js.org). Il récupère une page à la fois, à environ une
-requête par seconde, ralentit quand le site le lui demande, et garde un petit
-cache mémoire pour ne pas redemander deux fois la même page.
+const client = new LyricsComClient();
+const { data, cached } = await client.getSong({ id: "1234567" });
+console.log(data.title, data.artist, cached);
+```
+
+`search` et `getSong` répondent chacun `{ data, cached }`, et lèvent une erreur
+portant un des codes ci-dessus. Le plancher entre deux requêtes tient également
+ici.
+
+## Rythme et attribution
+
+Les requêtes partent une à une avec au moins une seconde entre elles, et le
+plancher d'une demi-seconde tient quelle que soit la configuration. Une recherche
+en `verify: "full"` va chercher jusqu'à cinq pages de chansons, ce qui est la
+chose la plus coûteuse que fait ce serveur.
+
+Chaque résultat porte l'artiste, le titre et l'adresse de la page de la chanson.
+Les paroles sont l'œuvre de leurs auteurs et de leurs éditeurs. Ce projet ne
+revendique aucun droit dessus, n'embarque aucune base de paroles et n'écrit rien
+sur le disque.
+
+Ce MCP est un projet non officiel, sans affiliation à lyrics.com.
+
+## Confidentialité
+
+Ce serveur ne collecte rien sur vous et n'envoie rien à son auteur. Il tourne sur
+votre machine, ne joint que `www.lyrics.com`, garde ses réponses en mémoire le temps qu'il
+tourne, et n'écrit rien sur le disque. [PRIVACY.md](PRIVACY.md) dit ce qu'une
+requête emporte et quels réglages changent cela.
 
 ## Développement
 
 ```bash
 npm install
-npm run build:fixtures   # régénère les fixtures HTML de test
-npm test                 # tests unitaires, sans réseau
-npm run typecheck
-npm run build
-LYRICSCOM_LIVE=1 npm run test:live   # touche le vrai site, exclu de la CI
-npm run inspector        # explorer les outils dans le MCP Inspector
+npm run build:fixtures
+npm test
+npm run check
 ```
 
-Les fixtures sont générées, pas aspirées : elles reproduisent la structure du
-markup de lyrics.com avec du texte de remplissage, ce qui rend les tests de
-parsing déterministes et évite de stocker des paroles sous droits dans ce dépôt.
+Les tests s'exécutent sur des fixtures engendrées et n'émettent aucune requête.
+La suite en direct, `npm run test:live`, émet une requête par route et tourne
+chaque nuit contre le site lui-même.
 
-La couche de scraping (`src/lyricscom`, `src/text`) n'importe pas le SDK MCP et
-est publiée séparément sous `mcp-lyricscom/client`, utilisable comme simple
-bibliothèque.
+## Contribuer
 
-## Paroles et droits d'auteur
-
-Les paroles de chansons sont des œuvres protégées, propriété de leurs auteurs et
-éditeurs. Ce projet ne revendique aucun droit dessus.
-
-Ce serveur est un client. Il va chercher les mêmes pages publiques de lyrics.com
-que celles que vous pourriez ouvrir dans un navigateur, à la demande, une requête
-à la fois, en réponse à une demande explicite de votre part ou de celle de votre
-assistant. Il ne parcourt pas le site, ne constitue aucune base de paroles, et
-n'écrit rien sur le disque. Les pages restent en mémoire quelques minutes pour ne
-pas solliciter le site inutilement.
-
-Chaque résultat porte l'artiste, le titre et l'URL source. Si vous affichez ou
-réutilisez ce que renvoie ce serveur, conservez cette attribution et le lien vers
-la page d'origine.
-
-Le serveur respecte le robots.txt de lyrics.com : aucun des endpoints qu'il
-utilise n'y est interdit, et il s'impose environ une requête par seconde. Ce
-rythme est contraint : `LYRICSCOM_MIN_INTERVAL_MS` est refusé en dessous de
-500 ms, une valeur plus basse retombant sur l'intervalle standard avec un
-avertissement sur stderr. Augmentez-le pour ralentir davantage.
-
-Projet non officiel, sans affiliation à lyrics.com ni à STANDS4 Ltd, ni
-approbation ou parrainage de leur part. Utilisez-le dans le respect des conditions
-d'utilisation de lyrics.com et du droit d'auteur qui vous est applicable.
+Les anomalies, les questions et les idées ont leur place dans
+[le suivi d'incidents](https://github.com/smeet666/mcp-lyricscom/issues). Les
+propositions de modification sont bienvenues ; ouvrir un ticket d'abord aide à
+s'accorder sur la forme du changement. Voir [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licence
 
-MIT, voir [LICENSE](./LICENSE). La licence couvre uniquement le code source, pas
-les paroles récupérées par son intermédiaire.
+MIT, voir [LICENSE](LICENSE). Les paroles appartiennent à leurs auteurs et à
+leurs éditeurs.
