@@ -1,0 +1,584 @@
+{
+  "author": "Damien Bouissou",
+  "authorUrl": "https://github.com/smeet666",
+  "description": "MCP server for lyrics.com. Search song lyrics by word or by title, and fetch full lyrics. No API key required.",
+  "homepage": "https://github.com/smeet666/mcp-lyricscom#readme",
+  "identifier": "smeet666-mcp-lyricscom",
+  "name": "mcp-lyricscom",
+  "prompts": [],
+  "resources": [],
+  "tags": [
+    "mcp",
+    "modelcontextprotocol",
+    "model-context-protocol",
+    "mcp-server",
+    "lyrics",
+    "lyrics.com",
+    "song-lyrics",
+    "song",
+    "music",
+    "search",
+    "claude",
+    "cursor",
+    "llm",
+    "ai",
+    "no-api-key"
+  ],
+  "tools": [
+    {
+      "name": "search_lyrics",
+      "title": "Search lyrics by word",
+      "description": "Search lyrics.com for songs whose lyrics contain a given word or phrase. Returns matching songs with artist, title, a short excerpt of the line where the word appears, and the lyrics.com id and URL needed to fetch the full text with get_lyrics. Use this when someone remembers a fragment of lyrics but not the song, or wants songs mentioning a word or theme. One call returns one page of lyrics.com results; to see more, increase 'page' rather than 'limit'. lyrics.com also returns loose and title-only matches, so results are filtered locally to keep only songs where the word genuinely appears in the lyrics. Set 'verify' to \"none\" to see the raw, unfiltered list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Word or short phrase to look for inside the lyrics, for example 'autrefois'."
+          },
+          "limit": {
+            "default": 10,
+            "description": "Maximum songs to return from this page.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "page": {
+            "default": 1,
+            "description": "Result page on lyrics.com. Each page holds up to 24 raw results.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "verify": {
+            "default": "snippet",
+            "description": "How to confirm the query really appears in the lyrics. 'snippet' checks the excerpt lyrics.com already returned and costs nothing. 'full' fetches up to 5 song pages and checks the complete lyrics, which is slow and can trigger rate limiting. 'none' disables filtering.",
+            "type": "string",
+            "enum": ["snippet", "full", "none"]
+          },
+          "include_excerpt": {
+            "default": true,
+            "description": "Include the matching lyric line excerpt in each result.",
+            "type": "boolean"
+          }
+        },
+        "required": ["query"],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "lyrics.com song id. Pass this to get_lyrics."
+                },
+                "title": {
+                  "type": "string"
+                },
+                "artist": {
+                  "type": "string"
+                },
+                "album": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "year": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "source_url": {
+                  "type": "string",
+                  "description": "Canonical lyrics.com page for this song."
+                },
+                "excerpt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Short lyric line showing where the query appears, when available."
+                }
+              },
+              "required": ["id", "title", "artist", "album", "year", "source_url", "excerpt"],
+              "additionalProperties": false
+            }
+          },
+          "raw_result_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Rows lyrics.com returned before local filtering and deduplication."
+          },
+          "filtered_out": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Rows dropped because the query was not found in their lyrics."
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "next_page": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "type": "string",
+            "const": "lyrics.com"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Caveats worth knowing, such as a cache hit or partial verification."
+          }
+        },
+        "required": [
+          "query",
+          "page",
+          "results",
+          "raw_result_count",
+          "filtered_out",
+          "has_more",
+          "next_page",
+          "source",
+          "notes"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "search_songs",
+      "title": "Search songs by title",
+      "description": "Find songs on lyrics.com by their title. Returns candidate songs with artist, album, year, and the lyrics.com id and URL. Use this when someone names a song and you need its id to call get_lyrics, or to tell covers and versions by different artists apart. An optional 'artist' narrows the list. lyrics.com searches titles and lyrics together, so results are ranked and filtered locally by title match; use match=\"strict\" to keep only genuine title matches.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Song title, or part of it."
+          },
+          "artist": {
+            "description": "Optional artist name, matched case-insensitively against each result.",
+            "type": "string",
+            "maxLength": 120
+          },
+          "limit": {
+            "default": 10,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "page": {
+            "default": 1,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "match": {
+            "default": "loose",
+            "description": "'strict' keeps only results whose title matches the query as a whole title, ignoring suffixes such as '(Remastered)'. 'loose' keeps anything lyrics.com returned, best match first.",
+            "type": "string",
+            "enum": ["loose", "strict"]
+          }
+        },
+        "required": ["title"],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "artist_filter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "page": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "lyrics.com song id. Pass this to get_lyrics."
+                },
+                "title": {
+                  "type": "string"
+                },
+                "artist": {
+                  "type": "string"
+                },
+                "album": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "year": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "source_url": {
+                  "type": "string",
+                  "description": "Canonical lyrics.com page for this song."
+                },
+                "excerpt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Short lyric line showing where the query appears, when available."
+                }
+              },
+              "required": ["id", "title", "artist", "album", "year", "source_url", "excerpt"],
+              "additionalProperties": false
+            }
+          },
+          "raw_result_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "filtered_out": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "next_page": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "type": "string",
+            "const": "lyrics.com"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "title",
+          "artist_filter",
+          "page",
+          "results",
+          "raw_result_count",
+          "filtered_out",
+          "has_more",
+          "next_page",
+          "source",
+          "notes"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "get_lyrics",
+      "title": "Get full lyrics",
+      "description": "Fetch the full lyrics of one song from lyrics.com, given the song id or URL returned by search_lyrics or search_songs. Lyrics can be long, so the response is truncated by default: check 'truncated' and call again with 'offset' set to 'next_offset' to continue reading. Some lyrics.com pages legitimately have no lyrics on file; those come back with status \"no_lyrics\" and an empty lyrics field, which is a valid answer and not an error, so do not retry them. Always cite 'source_url' and the artist when showing lyrics to a user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "lyrics.com numeric song id, as returned by the search tools. Preferred over 'url'.",
+            "type": "string",
+            "pattern": "^\\d+$"
+          },
+          "url": {
+            "description": "Full lyrics.com song URL. Only www.lyrics.com URLs are accepted. Ignored when 'id' is given.",
+            "type": "string",
+            "format": "uri"
+          },
+          "max_chars": {
+            "default": 6000,
+            "description": "Maximum characters of lyrics text to return in this call.",
+            "type": "integer",
+            "minimum": 200,
+            "maximum": 20000
+          },
+          "offset": {
+            "default": 0,
+            "description": "Character offset to resume from, for lyrics longer than max_chars.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "highlight": {
+            "description": "Optional word. When set, the response reports whether it appears in the lyrics and on which line.",
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok", "no_lyrics"]
+          },
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "artist": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_url": {
+            "type": "string"
+          },
+          "lyrics": {
+            "type": "string",
+            "description": "Slice of the lyrics text. Empty when status is 'no_lyrics'."
+          },
+          "total_chars": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "returned_chars": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "line_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "highlight": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "word": {
+                    "type": "string"
+                  },
+                  "found": {
+                    "type": "boolean"
+                  },
+                  "line_number": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "line": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["word", "found", "line_number", "line"],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attribution": {
+            "type": "string",
+            "description": "Ready-to-display credit line."
+          },
+          "source": {
+            "type": "string",
+            "const": "lyrics.com"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "status",
+          "id",
+          "title",
+          "artist",
+          "source_url",
+          "lyrics",
+          "total_chars",
+          "returned_chars",
+          "offset",
+          "next_offset",
+          "truncated",
+          "line_count",
+          "highlight",
+          "attribution",
+          "source",
+          "notes"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    }
+  ],
+  "version": "2.0.1"
+}
