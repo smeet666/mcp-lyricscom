@@ -152,8 +152,8 @@ export async function runGetLyrics(
     if (cached) {
       notes.push("Served from this server's short-lived in-memory cache.");
     }
-    const credit = [data.title, data.artist].filter(Boolean).join(" — ");
-    const attribution = `${credit || "Lyrics"} via lyrics.com — ${data.url}`;
+    const credit = [data.title, data.artist].filter(Boolean).join(" · ");
+    const attribution = `${credit || "Lyrics"} via lyrics.com (${data.url})`;
 
     if (!data.hasLyrics) {
       const structured = {

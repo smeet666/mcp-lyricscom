@@ -122,7 +122,7 @@ export function renderResultList(results: SongResultOut[]): string {
     .map((result, index) => {
       const year = result.year ? ` (${result.year})` : "";
       const album = result.album ? ` [${result.album}]` : "";
-      const head = `${index + 1}. ${result.title} — ${result.artist}${year}${album} · id: ${result.id}`;
+      const head = `${index + 1}. ${result.title} · ${result.artist}${year}${album} · id: ${result.id}`;
       return result.excerpt ? `${head}\n   "${result.excerpt}"` : head;
     })
     .join("\n");
