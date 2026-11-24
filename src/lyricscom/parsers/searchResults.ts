@@ -33,6 +33,15 @@ export function parseSearchResults(html: string, options: ParseSearchOptions): S
     if ($(SEL.serpShell).length === 0) {
       throw parseFailure(options.url, "no result rows and no recognizable search page structure");
     }
+    // lyrics.com states an empty search in a notice of its own. A page with the
+    // chrome but neither rows nor that notice arrived without its results, which
+    // says nothing about the query.
+    if ($(SEL.serpNoData).length === 0) {
+      throw parseFailure(
+        options.url,
+        "search page served without result rows or no-results notice",
+      );
+    }
     return { results: [], page: options.page, rawCount: 0, hasMore: false };
   }
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.1
+
+- **A search page that arrives without its results is reported as a
+  `parse_failure`.** lyrics.com states an empty search in a notice of its own,
+  and a page that carries neither result rows nor that notice says nothing about
+  the query. Reading it as "no songs found" answered a question the site never
+  answered, and the cache then repeated that answer for the rest of its
+  lifetime. A failed read is never cached, so the next request for the same
+  query goes back to lyrics.com.
+
 ## 2.1.0
 
 - **Node.js 24.22.1 or later**, inside the Node.js 24 line. The package, the

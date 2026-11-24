@@ -117,11 +117,23 @@ function buildSerpPage1() {
   return page("Joie Lyrics", `${SERP_SHELL_OPEN}\n${rows.join("\n")}\n${SERP_SHELL_CLOSE}`);
 }
 
+/** A search that found nothing, which lyrics.com states in a notice of its own. */
 function buildSerpEmpty() {
   return page(
     "No results",
-    `${SERP_SHELL_OPEN}<p>Sorry, no results were found.</p>${SERP_SHELL_CLOSE}`,
+    `${SERP_SHELL_OPEN}<div class="lyric-no-data clearfix">
+  <h3>We're sorry</h3>
+  <p>We couldn't find any lyrics matching your query</p>
+</div>${SERP_SHELL_CLOSE}`,
   );
+}
+
+/**
+ * The search page chrome with neither a result row nor the no-results notice:
+ * the page arrived without its results, which says nothing about the query.
+ */
+function buildSerpShellNoRows() {
+  return page("Autrefois Lyrics", `${SERP_SHELL_OPEN}${SERP_SHELL_CLOSE}`);
 }
 
 /** A well-formed page that is simply not a lyrics.com search page. */
@@ -195,6 +207,7 @@ function buildSongBroken() {
 const FIXTURES = {
   "serp-page1.html": buildSerpPage1(),
   "serp-empty.html": buildSerpEmpty(),
+  "serp-shell-no-rows.html": buildSerpShellNoRows(),
   "serp-unrecognized.html": buildSerpUnrecognized(),
   "song-with-lyrics.html": buildSongWithLyrics(),
   "song-fallback-body.html": buildSongFallbackBody(),

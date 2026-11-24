@@ -29,7 +29,7 @@ describe.runIf(enabled)("live lyrics.com", () => {
 
     expect(
       search.data.rawCount,
-      "lyrics.com returned no result rows at all: div.sec-lyric may have been renamed",
+      "lyrics.com printed its no-results notice for a query that always matches",
     ).toBeGreaterThan(0);
 
     // A gap between rows found and rows read means a row shape the parser does
