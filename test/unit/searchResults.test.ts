@@ -68,6 +68,19 @@ describe("parseSearchResults", () => {
     expect(page.hasMore).toBe(false);
   });
 
+  it("raises parse_failure when a search page carries neither rows nor the no-results notice", () => {
+    // lyrics.com states an empty search in a notice of its own. Without rows and
+    // without that notice, the page arrived without its results, and reading it
+    // as "no songs found" would answer a question the site never answered.
+    try {
+      parseSearchResults(load("serp-shell-no-rows.html"), OPTS);
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(LyricsComError);
+      expect((error as LyricsComError).code).toBe("parse_failure");
+    }
+  });
+
   it("raises parse_failure when the page is not a search page at all", () => {
     // The distinction that matters: unknown markup must never be reported as
     // "no songs found", because that is indistinguishable from a real answer.

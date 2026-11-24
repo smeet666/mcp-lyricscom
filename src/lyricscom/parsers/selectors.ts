@@ -14,6 +14,8 @@ export const SEL = {
    * "zero results" apart from "the markup changed", which must not look alike.
    */
   serpShell: "#lyric-search, .lyric-search, .pagination, #main-content, form[action*='serp']",
+  /** The notice lyrics.com prints when a search matched nothing. */
+  serpNoData: "div.lyric-no-data",
   resultTitle: "p.lyric-meta-title a",
   /**
    * Rows tied to an album expose the artist under `lyric-meta-album-artist`,
